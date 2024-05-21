@@ -2,11 +2,13 @@ import React, { useRef, useState } from "react";
 import Upload from "../img/upload.png";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTimes } from "@fortawesome/free-solid-svg-icons";
+import axios from 'axios'; // Import axios
 import "../App.css";
 
 const Translate = () => {
   const fileInputRef = useRef(null);
   const [selectedFiles, setSelectedFiles] = useState([]);
+  const [translatedImage, setTranslatedImage] = useState(null);
 
   const handleFileUploadClick = () => {
     fileInputRef.current.click();
@@ -21,6 +23,29 @@ const Translate = () => {
     setSelectedFiles((prevFiles) =>
       prevFiles.filter((_, i) => i !== index)
     );
+  };
+
+  const handleFileUpload = async () => {
+    if (selectedFiles.length === 0) {
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', selectedFiles[0]);
+
+    try {
+      const response = await axios.post('http://localhost:5000/upload', formData, {
+        responseType: 'blob',
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      const imageBlob = response.data;
+      const imageObjectURL = URL.createObjectURL(imageBlob);
+      setTranslatedImage(imageObjectURL);
+    } catch (error) {
+      console.error("There was an error uploading the file!", error);
+    }
   };
 
   return (
@@ -99,6 +124,7 @@ const Translate = () => {
 
           <div className="mt-auto">
             <button
+              onClick={handleFileUpload}
               className="btn btn-primary btn-lg rounded-pill"
               style={{
                 boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
@@ -109,6 +135,12 @@ const Translate = () => {
               Translate
             </button>
           </div>
+
+          {translatedImage && (
+            <div className="mt-4">
+              <img src={translatedImage} alt="Translated result" />
+            </div>
+          )}
         </div>
       </div>
     </div>

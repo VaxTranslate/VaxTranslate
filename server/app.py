@@ -1,4 +1,4 @@
-from flask import Flask, request, send_file
+from flask import Flask, request, send_file, jsonify
 import os
 from textDetect import detect_text_and_draw
 
@@ -9,12 +9,10 @@ PROCESSED_FOLDER = 'processed'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 
-# Define a simple route
 @app.route('/')
 def hello_world():
     return 'Hello, World!'
 
-# Define an API endpoint
 @app.route('/api/data', methods=['GET'])
 def get_data():
     data = {
