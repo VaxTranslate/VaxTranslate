@@ -1,8 +1,11 @@
 from flask import Flask, request, send_file, jsonify
 import os
+import io
+from flask_cors import CORS
 from textDetect import detect_text_and_draw
 
 app = Flask(__name__)
+CORS(app)
 
 UPLOAD_FOLDER = 'uploads'
 PROCESSED_FOLDER = 'processed'
@@ -36,7 +39,15 @@ def upload_file():
         # Process the image
         detect_text_and_draw(input_image_path)
         
-        return send_file('result.png', mimetype='image/png')
+        with open('result.png', 'rb') as image_file:
+            image_blob = image_file.read()
+        
+        return send_file(
+            io.BytesIO(image_blob),
+            mimetype='image/png',
+            as_attachment=True,
+            download_name='processed_image.png'
+        )
     else:
         return 'File is not a PNG image', 400
 
