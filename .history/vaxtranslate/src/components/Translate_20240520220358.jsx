@@ -1,0 +1,114 @@
+import React, { useRef, useState } from "react";
+import Upload from "../img/upload.png";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faTimes } from "@fortawesome/free-solid-svg-icons";
+import "../App.css";
+
+const Translate = () => {
+  const fileInputRef = useRef(null);
+  const [selectedFiles, setSelectedFiles] = useState([]);
+
+  const handleFileUploadClick = () => {
+    fileInputRef.current.click();
+  };
+
+  const handleFileChange = (event) => {
+    const files = Array.from(event.target.files);
+    setSelectedFiles((prevFiles) => [...prevFiles, ...files]);
+  };
+
+  const handleFileDelete = (index) => {
+    setSelectedFiles((prevFiles) =>
+      prevFiles.filter((_, i) => i !== index)
+    );
+  };
+
+  return (
+    <div className="flex items-center justify-center mt-20">
+      <div className="w-1/3">
+        <div
+          className="bg-white shadow-md rounded-md p-5 flex flex-col"
+          style={{ width: "900px", borderRadius: "10px", margin: "0 auto", marginTop: "50px" }}
+        >
+          <div
+            onClick={handleFileUploadClick}
+            className="file-upload text-center"
+            style={{
+              backgroundColor: "#E2F0FF",
+              border: "2px dashed #3485FF",
+              cursor: "pointer",
+              borderRadius: "10px",
+              padding: "70px 140px 30px 140px",
+            }}
+          >
+            <input
+              type="file"
+              ref={fileInputRef}
+              style={{ display: "none" }}
+              onChange={handleFileChange}
+            />
+            <img
+              src={Upload}
+              alt="upload"
+              className="mb-4"
+              style={{ borderRadius: "10px", width: "100px" }}
+            />
+            <h5 className="font-bold text-uppercase">
+              Drag & drop items or UPLOAD
+            </h5>
+            <p className="text-sm text-gray-500">
+              Supported formats: JPEG, PNG, PDF, SVG, BMP, TIFF, TGA
+            </p>
+          </div>
+
+          <div className="mt-4 flex justify-between w-full">
+            <button className="btn btn-outline-primary rounded-pill w-1/4 mr-4">Button 1</button>
+            <button className="btn btn-outline-primary rounded-pill w-1/4 mr-4">Button 2</button>
+            <button className="btn btn-outline-primary rounded-pill w-1/4 mr-4">Button 3</button>
+            <button className="btn btn-outline-primary rounded-pill w-1/4">Button 4</button>
+          </div>
+
+          <div className="mt-4 file-list" style={{ width: "600px", margin: "0 auto", maxHeight: "192px", overflowY: "auto" }}>
+            {selectedFiles.map((file, index) => (
+              <div
+                key={index}
+                style={{ display: "flex", alignItems: "center", border: "1px solid #eee", padding: "8px", marginBottom: "8px", borderRadius: "5px" }}
+              >
+                <img
+                  src={URL.createObjectURL(file)}
+                  alt="uploaded"
+                  style={{ width: "50px", height: "50px", objectFit: "cover", marginRight: "15px" }}
+                />
+                <span style={{ flexGrow: 1 }}>{file.name}</span>
+                <button
+                  onClick={() => handleFileDelete(index)}
+                  style={{ background: "none", border: "none", padding: "0", cursor: "pointer", marginLeft: "auto" }}
+                >
+                  <FontAwesomeIcon
+                    icon={faTimes}
+                    style={{ fontSize: "1.2rem" }}
+                  />
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-auto">
+            <button
+              className="btn btn-primary btn-lg rounded-pill"
+              style={{
+                boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
+                padding: "10px 80px 10px 80px",
+                marginTop: "50px",
+              }}
+            >
+              Translate
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Translate;
