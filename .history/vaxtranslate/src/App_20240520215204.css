@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+.App {
+  text-align: center;
+  
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  padding: 0;
+  height: 100vh;
+  background-color: rgb(231, 231, 231);
+}
+
