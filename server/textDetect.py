@@ -79,4 +79,4 @@ def detect_text_and_draw(path):
     cv2.imwrite(output_path, img)
     print(f"Output image saved to {output_path}")
 
-detect_text_and_draw("ocr.png")
+# detect_text_and_draw("ocr.png")
