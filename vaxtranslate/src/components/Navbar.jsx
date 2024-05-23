@@ -31,7 +31,7 @@ const Navbar = () => {
                     <Link className="nav-link" to="/community">Community</Link>
                 </li>
                 <li className="nav-item fw-bold d-flex align-items-center me-3" style={{marginTop: "5px"}}>
-                    <Link className="nav-link" to="/profile"><FaUserCircle size={30} /></Link>
+                    <Link className="nav-link" to="/login"><FaUserCircle size={30} /></Link>
                 </li>
                 </ul>
       </div>
