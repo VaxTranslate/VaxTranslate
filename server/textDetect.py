@@ -37,11 +37,21 @@ def detect_text_and_draw(path):
 
         translated_text = translate_client.translate(text.description, target_language='en')['translatedText']
 
+        # Calculate the size of the translated text
+        (text_width, text_height), _ = cv2.getTextSize(translated_text, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
+
         x_coords = [v[0] for v in vertices]
         y_coords = [v[1] for v in vertices]
         min_x, max_x = min(x_coords), max(x_coords)
         min_y, max_y = min(y_coords), max(y_coords)
 
+        # Adjust the max_x to fit the translated text if it's larger
+        if text_width > (max_x - min_x):
+           max_x = min_x + text_width
+        # Adjust the max_y to fit the translated text if it's larger
+        if text_height > (max_y - min_y):
+           max_y = min_y + text_height
+           
         text_boxes.append({
             'min_x': min_x,
             'min_y': min_y,
@@ -53,6 +63,15 @@ def detect_text_and_draw(path):
     def adjust_text_boxes(boxes):
         for i in range(len(boxes)):
             for j in range(i + 1, len(boxes)):
+                # Adjust x position if boxes overlap horizontally
+                while (
+                    boxes[i]['min_x'] < boxes[j]['max_x'] and
+                    boxes[i]['max_x'] > boxes[j]['min_x'] and
+                    boxes[i]['min_y'] == boxes[j]['min_y']
+                ):
+                    boxes[j]['min_x'] += 20
+                    boxes[j]['max_x'] += 20
+                # Adjust y position if boxes overlap vertically
                 while (
                     boxes[i]['min_x'] < boxes[j]['max_x'] and
                     boxes[i]['max_x'] > boxes[j]['min_x'] and
