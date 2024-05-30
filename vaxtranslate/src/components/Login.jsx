@@ -4,44 +4,47 @@ import { FaUserCircle } from "react-icons/fa";
 
 function LoginPage() {
   return (
-    
-    <div className="login-container">
-      <header>
-      <div className="flex items-center justify-center mt-20">
-      <div className="w-1/3">
-      <div
-          className="bg-white shadow-md rounded-md p-5 flex flex-col"
-          style={{ width: "900px", borderRadius: "10px", margin: "0 auto", marginTop: "50px" }}
-        >
-        <h1>VAX Translate</h1>
-        </div> </div> </div>
+    <div className="bg-blue-300 p-6 rounded-lg shadow-md"> 
+        <div>
+            <input
+              type="text"
+              placeholder="Login ID"
+              className="w-96 p-2 mb-2 border rounded"
+            />
+          </div>
 
+          <div>
+            <input
+              type="password"
+              placeholder="Password"
+              className="w-96 p-2 mb-2 border rounded"
+            />
+          </div>
 
-        <div className="language-selector">
-          EN {/* Language selection icon */}
+          <div>
+            <label className="flex items-center mb-2">
+            <input type="checkbox" className="mr-2" />
+                Remember me
+            </label>
+          </div>
+
+            <button className="bg-blue-600 py-2 px-4 rounded">
+                Log in
+            </button>
+          
+
+            <p className="text-sm mt-2">
+              By continuing, you agree to the Terms of use and Privacy Policy.
+            </p>
+            <div className="mt-4">
+              <a href="#" className="text-blue-500">
+                Forgot your password?
+              </a>
+              <span className="mx-2">|</span>
+              <a href="#" className="text-blue-500">
+                Don't have an account? Sign up
+              </a>
         </div>
-      </header>
-      <form className="login-form">
-        <div className="input-group">
-          <label htmlFor="loginId">Login ID</label>
-          <input type="text" id="loginId" placeholder="Enter your login" />
-        </div>
-        <div className="input-group">
-          <label htmlFor="password">Password</label>
-          <input type="password" id="password" placeholder="Enter your password" />
-          {/* Password visibility toggle */}
-        </div>
-        <div className="remember-me-checkbox">
-          <input type="checkbox" id="rememberMe" />
-          <label htmlFor="rememberMe">Remember me</label>
-        </div>
-        {/* Submit button should be styled according to the image */}
-        {/* Links below styled as per image */}
-      </form>
-      <footer>
-        By continuing, you agree to the Terms of use and Privacy Policy.
-        Forgot your password? Don't have an account? Sign up
-      </footer>
     </div>
   );
 }
