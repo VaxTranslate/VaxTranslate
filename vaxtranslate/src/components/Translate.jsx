@@ -2,7 +2,7 @@ import React, { useRef, useState } from "react";
 import Upload from "../img/upload.png";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTimes } from "@fortawesome/free-solid-svg-icons";
-import axios from 'axios'; // Import axios
+import axios from "axios"; // Import axios
 import "../App.css";
 
 const Translate = () => {
@@ -20,9 +20,7 @@ const Translate = () => {
   };
 
   const handleFileDelete = (index) => {
-    setSelectedFiles((prevFiles) =>
-      prevFiles.filter((_, i) => i !== index)
-    );
+    setSelectedFiles((prevFiles) => prevFiles.filter((_, i) => i !== index));
   };
 
   const handleFileUpload = async () => {
@@ -31,15 +29,19 @@ const Translate = () => {
     }
 
     const formData = new FormData();
-    formData.append('file', selectedFiles[0]);
+    formData.append("file", selectedFiles[0]);
 
     try {
-      const response = await axios.post('http://localhost:5000/upload', formData, {
-        responseType: 'blob',
-        headers: {
-          'Content-Type': 'multipart/form-data'
+      const response = await axios.post(
+        "http://127.0.0.1:5000/upload",
+        formData,
+        {
+          responseType: "blob",
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
         }
-      });
+      );
       const imageBlob = response.data;
       const imageObjectURL = URL.createObjectURL(imageBlob);
       setTranslatedImage(imageObjectURL);
@@ -53,7 +55,12 @@ const Translate = () => {
       <div className="w-1/3">
         <div
           className="bg-white shadow-md rounded-md p-5 flex flex-col"
-          style={{ width: "900px", borderRadius: "10px", margin: "0 auto", marginTop: "50px" }}
+          style={{
+            width: "900px",
+            borderRadius: "10px",
+            margin: "0 auto",
+            marginTop: "50px",
+          }}
         >
           <div
             onClick={handleFileUploadClick}
@@ -89,33 +96,67 @@ const Translate = () => {
           </div>
 
           <div className="mt-4 flex justify-between w-full">
-            <button className="btn btn-outline-primary rounded-pill w-1/4 mr-4">Button 1</button>
-            <button className="btn btn-outline-primary rounded-pill w-1/4 mr-4">Button 2</button>
-            <button className="btn btn-outline-primary rounded-pill w-1/4 mr-4">Button 3</button>
-            <button className="btn btn-outline-primary rounded-pill w-1/4">Button 4</button>
+            <button className="btn btn-outline-primary rounded-pill w-1/4 mr-4">
+              Button 1
+            </button>
+            <button className="btn btn-outline-primary rounded-pill w-1/4 mr-4">
+              Button 2
+            </button>
+            <button className="btn btn-outline-primary rounded-pill w-1/4 mr-4">
+              Button 3
+            </button>
+            <button className="btn btn-outline-primary rounded-pill w-1/4">
+              Button 4
+            </button>
           </div>
 
-          <div className="mt-4 file-list" style={{ width: "600px", margin: "0 auto", maxHeight: "192px", overflowY: "auto" }}>
+          <div
+            className="mt-4 file-list"
+            style={{
+              width: "600px",
+              margin: "0 auto",
+              maxHeight: "192px",
+              overflowY: "auto",
+            }}
+          >
             {selectedFiles.map((file, index) => (
               <div
                 key={index}
-                style={{ display: "flex", alignItems: "center", border: "1px solid #eee", padding: "8px", marginBottom: "8px", borderRadius: "5px" }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  border: "1px solid #eee",
+                  padding: "8px",
+                  marginBottom: "8px",
+                  borderRadius: "5px",
+                }}
               >
                 <img
                   src={URL.createObjectURL(file)}
                   alt="uploaded"
-                  style={{ width: "50px", height: "50px", objectFit: "cover", marginRight: "15px" }}
+                  style={{
+                    width: "50px",
+                    height: "50px",
+                    objectFit: "cover",
+                    marginRight: "15px",
+                  }}
                 />
                 <div>
                   <span>{file.name}</span>
                 </div>
                 <button
                   onClick={() => handleFileDelete(index)}
-                  style={{ background: "none", border: "none", padding: "0", cursor: "pointer", marginLeft: "auto" }}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    padding: "0",
+                    cursor: "pointer",
+                    marginLeft: "auto",
+                  }}
                 >
                   <FontAwesomeIcon
                     icon={faTimes}
-                    style={{ fontSize: "1.2rem", marginRight: "10px"}}
+                    style={{ fontSize: "1.2rem", marginRight: "10px" }}
                   />
                 </button>
               </div>
