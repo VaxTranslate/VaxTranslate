@@ -3,6 +3,7 @@ import os
 import io
 from flask_cors import CORS
 from textDetect import detect_text_and_draw
+from textClustering import text_clustering
 
 app = Flask(__name__)
 CORS(app)
@@ -37,7 +38,8 @@ def upload_file():
         file.save(input_image_path)
         
         # Process the image
-        detect_text_and_draw(input_image_path)
+        #detect_text_and_draw(input_image_path)
+        text_clustering(input_image_path)
         
         with open('result.png', 'rb') as image_file:
             image_blob = image_file.read()
