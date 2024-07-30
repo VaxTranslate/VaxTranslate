@@ -1,0 +1,42 @@
+.vh-100 {
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+  
+.card {
+    border-radius: 15px;
+}
+  
+  .bg-image-vertical {
+    position: relative;
+    overflow: hidden;
+    background-repeat: no-repeat;
+    background-position: right center;
+    background-size: auto 100%;
+  }
+  
+  @media (min-width: 1025px) {
+    .h-custom-2 {
+      height: 100%;
+    }
+  }
+
+.custom-btn-info {
+    background-color: #3485FF; /* Customize this color */
+    border-color: #3485FF;    /* Customize this color */
+    color: #fff;              /* Customize this color */
+}
+  
+.custom-btn-info:hover {
+    background-color: #61b0ff; /* Customize this color */
+    border-color: #61b0ff;    /* Customize this color */
+    color: black;              /* Customize this color */
+}
+
+.login-background {
+    background-color: white;
+}
+  
+  
