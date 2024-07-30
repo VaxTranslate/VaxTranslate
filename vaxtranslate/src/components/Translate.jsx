@@ -131,6 +131,7 @@ const Translate = () => {
                   borderRadius: "5px",
                 }}
               >
+                
                 <img
                   src={URL.createObjectURL(file)}
                   alt="uploaded"
