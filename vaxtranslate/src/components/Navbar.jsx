@@ -4,7 +4,7 @@ import { FaUserCircle } from "react-icons/fa";
 
 const Navbar = () => {
     return (
-        <nav className="navbar navbar-expand-lg navbar-light" style={{ backgroundColor: "white", boxShadow: "0 2px 4px rgba(0, 0, 0, 0.2)", fontFamily: 'Inter, sans-serif', fontWeight: "500" }}>
+        <nav className="navbar navbar-expand-lg navbar-light" style={{ backgroundColor: "white", fontFamily: 'Inter, sans-serif', fontWeight: "500" }}>
             <Link to="/" className="navbar-brand ms-30" style={{color: "#3485FF", fontWeight: "bold", fontSize: "30px"}}>
                 VAX Translate
             </Link>
