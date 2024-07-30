@@ -7,6 +7,12 @@ import LoginPage from "./components/Login";
 import Result from "./components/Result";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import "./App.css";
+import '@fontsource/poppins/400.css'; // Regular weight
+import '@fontsource/poppins/700.css'; // Bold weight
+import '@fontsource/poppins/500.css'; // Medium weightimport '@fontsource/poppins/500.css'; // Medium weight
+import '@fontsource/poppins/400.css';
+
+
 function App() {
   return (
     <Router>
