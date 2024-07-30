@@ -24,8 +24,9 @@ const Result = () => {
               alt="Translated result"
               style={{ marginTop: "20px", maxWidth: "100%" }}
             />
-          )}
+          )} 
         </div>
+        
       </div>
     </div>
   );
