@@ -48,6 +48,8 @@ def detect_and_translate_texts(image_path):
     
     # Join the translated lines of texts with newline characters
     translated_texts = "\n".join(translated_lines)
+    print("wowowowowowowowwowowo")
+    print(translated_texts)
     return translated_texts
 
 def cluster_personal_info_and_vaccination_info(translated_texts):
