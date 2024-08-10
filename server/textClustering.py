@@ -1,5 +1,6 @@
 import openai
 import os
+import editdistance
 from PIL import Image, ImageDraw, ImageFont
 from google.cloud import vision
 from google.cloud import translate_v2 as translate
@@ -35,11 +36,19 @@ def detect_and_translate_texts(image_path):
     # Extract the full text description
     full_text = texts[0].description
 
+    translated_texts = {
+        "texts_without_newline": "",
+        "texts_with_newline": ""
+    }
+    
+    # 1. Extract the translated texts, which aren't splited by \n
+    translated_texts["texts_without_newline"] = translate_client.translate(full_text, target_language='en')['translatedText']
+
+    # 2. Extract the translated texts, which are splited by \n
     # Split the text into lines
     lines = full_text.split('\n')
 
     translated_lines = []
-
     for line in lines:
         # Translate each line of texts into English
         translated_text = translate_client.translate(line, target_language='en')['translatedText']
@@ -47,9 +56,8 @@ def detect_and_translate_texts(image_path):
         translated_lines.append(translated_text)
     
     # Join the translated lines of texts with newline characters
-    translated_texts = "\n".join(translated_lines)
-    print("wowowowowowowowwowowo")
-    print(translated_texts)
+    translated_texts["texts_with_newline"] = "\n".join(translated_lines)
+
     return translated_texts
 
 def cluster_personal_info_and_vaccination_info(translated_texts):
@@ -82,7 +90,7 @@ def cluster_personal_info_and_vaccination_info(translated_texts):
     }
 
     lines = translated_texts.split('\n')
-    skip_lines = set()  # 개인 정보 라인을 추적하기 위한 집합
+    skip_lines = set()  # A set of tracking lines of texts related to personal information
     keyword_positions = {key: [] for key in keywords}  # A dictionary to track each keyword's location(a number of line)
 
     # Track each keyword's location 
@@ -98,7 +106,6 @@ def cluster_personal_info_and_vaccination_info(translated_texts):
     # Extract the text coming right after the keyword
     for key, positions in keyword_positions.items():
         if positions:
-            print("positions", positions)
             # The position of the first keyword
             first_pos = positions[0]
             # The position of the second occurrence of the keyword when it is repeated twice
@@ -183,9 +190,50 @@ def draw_texts_on_image(image_path, formatted_texts, output_path):
 
     return new_image
 
+def calculate_cer_and_wer(ocr_result, ground_truth):
+    # Remove spaces and convert to lowercase for comparison
+    ocr_clean = ocr_result.replace(" ", "").lower()
+    gt_clean = ground_truth.replace(" ", "").lower()
+
+    # Compute edit distance (Levenshtein distance) between cleaned strings
+    distance = editdistance.eval(ocr_clean, gt_clean)
+
+    # Calculate CER
+    cer = distance / len(gt_clean)
+
+    # Split into words
+    ocr_words = ocr_result.split()
+    gt_words = ground_truth.split()
+
+    # Compute edit distance (Levenshtein distance) between word lists
+    distance_words = editdistance.eval(ocr_words, gt_words)
+
+    # Calculate WER
+    wer = distance_words / len(gt_words)
+
+    # Find matched words
+    matched_words = [word for word in ocr_words if word in gt_words]
+
+    return cer, wer, matched_words
+
 # main function
 def text_clustering(path):
     translated_texts = detect_and_translate_texts(path)
-    cluster_texts = cluster_personal_info_and_vaccination_info(translated_texts)
+    cluster_texts = cluster_personal_info_and_vaccination_info(translated_texts["texts_with_newline"])
+
+    # Ground truth (reference) text
+    ground_truth = "Diphtheria tetanus pertussis Measles mumps rubella"
+
+    # OCR result from your provided data
+    ocr_result = translated_texts["texts_without_newline"]
+
+    # Calculate CER, WER, and get matched words
+    cer, wer, matched_words = calculate_cer_and_wer(ocr_result, ground_truth)
+
+    print(f"CER: {cer:.4f}")
+    print(f"WER: {wer:.4f}")
+    print(f"Matched words: {', '.join(matched_words)}")
+    # print("\n")
+
     formatted_texts = format_texts(cluster_texts["personal_info"], cluster_texts["vaccination_info"])
     draw_texts_on_image(path,formatted_texts, "result.png")
