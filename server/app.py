@@ -16,6 +16,7 @@ UPLOAD_FOLDER = 'uploads'
 PROCESSED_FOLDER = 'processed'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "vaxtranslate-423905-15fcc3121322.json"
 
 # Load database URL from .env file
 load_dotenv()
