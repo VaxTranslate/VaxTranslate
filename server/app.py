@@ -1,4 +1,8 @@
 from flask import Flask, request, send_file, jsonify
+from sqlalchemy import create_engine
+from sqlalchemy.orm import scoped_session, sessionmaker
+from sqlalchemy.ext.declarative import declarative_base
+from dotenv import load_dotenv
 import os
 import io
 from flask_cors import CORS
@@ -13,6 +17,24 @@ PROCESSED_FOLDER = 'processed'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "vaxtranslate-423905-15fcc3121322.json"
+
+# Load database URL from .env file
+load_dotenv()
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+# Set up SQLAlchemy engine and session
+engine = create_engine(DATABASE_URL)
+db_session = scoped_session(sessionmaker(autocommit=False,
+                                         autoflush=False,
+                                         bind=engine))
+
+# Optional: If you have a base class for your models, bind the engine to it
+Base = declarative_base()
+Base.query = db_session.query_property()
+
+@app.teardown_appcontext
+def shutdown_session(exception=None):
+    db_session.remove()
 
 @app.route('/')
 def hello_world():
