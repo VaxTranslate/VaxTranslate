@@ -26,3 +26,4 @@ yarn-error.log*
 .history
 server/vaxtranslate-423905-15fcc3121322.json
 node_modules
+.env

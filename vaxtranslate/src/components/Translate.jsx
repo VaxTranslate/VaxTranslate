@@ -2,13 +2,17 @@ import React, { useRef, useState } from "react";
 import Upload from "../img/upload.png";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTimes } from "@fortawesome/free-solid-svg-icons";
-import axios from "axios"; // Import axios
+import { PropagateLoader } from 'react-spinners';
+import axios from "axios";
+import { useNavigate } from 'react-router-dom';
 import "../App.css";
 
 const Translate = () => {
+  const navigate = useNavigate(); 
   const fileInputRef = useRef(null);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [translatedImage, setTranslatedImage] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   const handleFileUploadClick = () => {
     fileInputRef.current.click();
@@ -24,6 +28,7 @@ const Translate = () => {
   };
 
   const handleFileUpload = async () => {
+    setLoading(true);
     if (selectedFiles.length === 0) {
       return;
     }
@@ -45,6 +50,8 @@ const Translate = () => {
       const imageBlob = response.data;
       const imageObjectURL = URL.createObjectURL(imageBlob);
       setTranslatedImage(imageObjectURL);
+      setLoading(false);
+      navigate('/result', { state: { translatedImage: imageObjectURL } });
     } catch (error) {
       console.error("There was an error uploading the file!", error);
     }
@@ -176,12 +183,12 @@ const Translate = () => {
               Translate
             </button>
           </div>
-
-          {translatedImage && (
-            <div className="mt-4">
-              <img src={translatedImage} alt="Translated result" />
+          {loading && (
+            <div style={{ marginTop: "30px" }}>
+              <PropagateLoader color="#3485FF" />
             </div>
-          )}
+          )
+          }    
         </div>
       </div>
     </div>
