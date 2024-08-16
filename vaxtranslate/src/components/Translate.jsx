@@ -77,6 +77,7 @@ const Translate = () => {
               type="file"
               ref={fileInputRef}
               style={{ display: "none" }}
+              accept=".png, .pdf"
               onChange={handleFileChange}
             />
             <img
