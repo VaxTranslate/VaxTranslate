@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import '../styles/login.css';
+import '../App.css';
 
 const LoginPage = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -28,12 +29,14 @@ const LoginPage = () => {
                   </div>
                 )}
                 <div data-mdb-input-init className="form-outline mb-4">
-                  <input type="email" id={isLogin ? "form2Example18" : "form3Example2"} className="form-control form-control-lg" />
                   <label className="form-label" htmlFor={isLogin ? "form2Example18" : "form3Example2"}>Email address</label>
+                  <input type="email" id={isLogin ? "form2Example18" : "form3Example2"} className="form-control form-control-lg" />
+                  
                 </div>
                 <div data-mdb-input-init className="form-outline mb-4">
-                  <input type="password" id={isLogin ? "form2Example28" : "form3Example3"} className="form-control form-control-lg" />
                   <label className="form-label" htmlFor={isLogin ? "form2Example28" : "form3Example3"}>Password</label>
+                  <input type="password" id={isLogin ? "form2Example28" : "form3Example3"} className="form-control form-control-lg" />
+                  
                 </div>
                 <div className="pt-1 mb-4">
                   <button
@@ -41,7 +44,7 @@ const LoginPage = () => {
                     data-mdb-ripple-init
                     className="btn custom-btn-info btn-lg btn-block" 
                     type="button"
-                    style={{ borderRadius: '30px' }}
+                    style={{ borderRadius: '15px' }}
                   >
                     {isLogin ? 'Login' : 'Sign up'}
                   </button>
