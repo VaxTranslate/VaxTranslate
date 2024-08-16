@@ -3,3 +3,5 @@ Pillow
 opencv-python-headless
 google-cloud-vision
 google-cloud-translate
+psycopg2-binary
+SQLAlchemy
