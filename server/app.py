@@ -8,79 +8,127 @@ import io
 from flask_cors import CORS
 from textDetect import detect_text_and_draw
 from textClustering import text_clustering
-from pdf2image import convert_from_path, convert_from_bytes # type: ignore
-from pdf2image.exceptions import ( # type: ignore
+from pdf2image import convert_from_path, convert_from_bytes  # type: ignore
+from pdf2image.exceptions import (  # type: ignore
     PDFInfoNotInstalledError,
     PDFPageCountError,
-    PDFSyntaxError
+    PDFSyntaxError,
 )
 
 app = Flask(__name__)
 CORS(app)
 
-UPLOAD_FOLDER = 'uploads'
-PROCESSED_FOLDER = 'processed'
+UPLOAD_FOLDER = "uploads"
+PROCESSED_FOLDER = "processed"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "vaxtranslate-423905-15fcc3121322.json"
 
 # Load database URL from .env file
-load_dotenv()
-DATABASE_URL = os.getenv("DATABASE_URL")
+# load_dotenv()
+# DATABASE_URL = os.getenv("DATABASE_URL")
 
 # Set up SQLAlchemy engine and session
-engine = create_engine(DATABASE_URL)
-db_session = scoped_session(sessionmaker(autocommit=False,
-                                         autoflush=False,
-                                         bind=engine))
+# engine = create_engine(DATABASE_URL)
+# db_session = scoped_session(sessionmaker(autocommit=False,
+#                                          autoflush=False,
+#                                          bind=engine))
 
 # Optional: If you have a base class for your models, bind the engine to it
-Base = declarative_base()
-Base.query = db_session.query_property()
+# Base = declarative_base()
+# Base.query = db_session.query_property()
 
-@app.teardown_appcontext
-def shutdown_session(exception=None):
-    db_session.remove()
+# @app.teardown_appcontext
+# def shutdown_session(exception=None):
+#     db_session.remove()
 
-@app.route('/')
+
+@app.route("/")
 def hello_world():
-    return 'Hello, World!'
+    return "Hello, World!"
 
-@app.route('/api/data', methods=['GET'])
+
+@app.route("/api/data", methods=["GET"])
 def get_data():
-    data = {
-        'message': 'Hello, API!',
-        'status': 'success'
-    }
+    data = {"message": "Hello, API!", "status": "success"}
     return jsonify(data)
 
-@app.route('/upload', methods=['POST'])
+
+@app.route("/upload", methods=["POST"])
 def upload_file():
-    if 'file' not in request.files:
-        return 'No file part', 400
-    file = request.files['file']
-    if file.filename == '':
-        return 'No selected file', 400
-    if file and (file.filename.endswith('.png') or file.filename.endswith('.pdf')):
+    if "file" not in request.files:
+        return "No file part", 400
+    file = request.files["file"]
+    if file.filename == "":
+        return "No selected file", 400
+    if file and (file.filename.endswith(".png") or file.filename.endswith(".pdf")):
         input_file_path = os.path.join(UPLOAD_FOLDER, file.filename)
-        output_file_path = os.path.join(PROCESSED_FOLDER, 'processed_' + file.filename)
+        output_file_path = os.path.join(PROCESSED_FOLDER, "processed_" + file.filename)
         file.save(input_file_path)
-        
-        # Process the image
-        #detect_text_and_draw(input_image_path)
-        text_clustering(input_image_path)
-        
-        with open('result.png', 'rb') as image_file:
+
+        # Process the file
+        if file.filename.endswith(".png"):
+            text_clustering(input_file_path)
+            with open("result.png", "rb") as image_file:
+                image_blob = image_file.read()
+            return send_file(
+                io.BytesIO(image_blob),
+                mimetype="image/png",
+                as_attachment=True,
+                download_name="processed_image.png",
+            )
+        elif file.filename.endswith(".pdf"):
+            # Add PDF processing logic here
+            # For example, you might convert the PDF to images and then process
+            # each image, or extract text directly from the PDF.
+            image = convert_from_path(input_file_path, fmt="png")
+            image[0].save(f"converted_record.png", "PNG")
+
+            text_clustering(f"converted_record.png")
+            with open("result.png", "rb") as image_file:
+                image_blob = image_file.read()
+            return send_file(
+                io.BytesIO(image_blob),
+                mimetype="image/png",
+                as_attachment=True,
+                download_name="processed_image.png",
+            )
+
+        return "File processed successfully", 200
+    else:
+        return "File is not a PNG or PDF image", 400
+
+
+@app.route("/detect-text-and-draw", methods=["POST"])
+def detect_text_and_draw_endpoint():
+    if "file" not in request.files:
+        return jsonify({"error": "No file part"}), 400
+
+    file = request.files["file"]
+
+    if file.filename == "":
+        return jsonify({"error": "No selected file"}), 400
+
+    if file and file.filename.endswith(".png"):
+        file_path = os.path.join(UPLOAD_FOLDER, file.filename)
+        file.save(file_path)
+
+        # Call the function from textDetect.py
+        detect_text_and_draw(file_path)
+
+        # Return the processed image
+        with open("result.png", "rb") as image_file:
             image_blob = image_file.read()
-        
+
         return send_file(
             io.BytesIO(image_blob),
-            mimetype='image/png',
+            mimetype="image/png",
             as_attachment=True,
-            download_name='processed_image.png'
+            download_name="processed_image.png",
         )
-    else:
-        return 'File is not a PNG or PDF image', 400
 
-if __name__ == '__main__':
+    return jsonify({"error": "File is not a PNG image"}), 400
+
+
+if __name__ == "__main__":
     app.run(debug=True)

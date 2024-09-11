@@ -38,7 +38,7 @@ const Translate = () => {
 
     try {
       const response = await axios.post(
-        "http://127.0.0.1:5000/upload",
+        "http://18.119.124.175/upload",
         formData,
         {
           responseType: "blob",
