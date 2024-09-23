@@ -11,8 +11,8 @@ const Translate = () => {
   const navigate = useNavigate(); 
   const fileInputRef = useRef(null);
   const [selectedFiles, setSelectedFiles] = useState([]);
-  const [translatedImage, setTranslatedImage] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [cisJson, setCisJson] = useState(null);
 
   const handleFileUploadClick = () => {
     fileInputRef.current.click();
@@ -41,17 +41,15 @@ const Translate = () => {
         "http://18.119.124.175/upload",
         formData,
         {
-          responseType: "blob",
+          responseType: "json",
           headers: {
             "Content-Type": "multipart/form-data",
           },
         }
       );
-      const imageBlob = response.data;
-      const imageObjectURL = URL.createObjectURL(imageBlob);
-      setTranslatedImage(imageObjectURL);
+      setCisJson(response.data);
       setLoading(false);
-      navigate('/result', { state: { translatedImage: imageObjectURL } });
+      navigate('/result', { state: { cis: response.data } });
     } catch (error) {
       console.error("There was an error uploading the file!", error);
     }

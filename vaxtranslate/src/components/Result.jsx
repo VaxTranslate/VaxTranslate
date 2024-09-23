@@ -3,7 +3,9 @@ import { useLocation } from "react-router-dom";
 
 const Result = () => {
   const location = useLocation();
-  const { translatedImage } = location.state || {};
+  const { cis } = location.state || {};
+  console.log(cis);
+
 
   return (
     <div className="d-flex align-items-center justify-content-center mt-5">
@@ -18,13 +20,7 @@ const Result = () => {
           }}
         >
           <h2 className="text-center">Translation Result</h2>
-          {translatedImage && (
-            <img
-              src={translatedImage}
-              alt="Translated result"
-              style={{ marginTop: "20px", maxWidth: "100%" }}
-            />
-          )} 
+        
         </div>
         
       </div>
