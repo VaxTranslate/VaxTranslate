@@ -176,7 +176,6 @@ def draw_texts_on_image(image_path, formatted_texts, output_path):
     # Set up the font for drawing the texts
     font = ImageFont.load_default()
  
-    print(formatted_texts)
     # Drawing texts from the upper-left side in order
     text_y_position = 10
     for text in formatted_texts.split('\n'):
@@ -216,24 +215,131 @@ def calculate_cer_and_wer(ocr_result, ground_truth):
 
     return cer, wer, matched_words
 
+def cis(translated_texts):
+    openai.api_key = openai_api_key
+    
+    prompt = f"""
+    Extract the relevant data from the provided immunization record and format it into the following consistent JSON structure. Each field should always appear, even if the values are empty or marked as "N/A." Use this example JSON as a template:
+
+    {{
+      "child": {{
+        "last_name": "Doe",
+        "first_name": "John",
+        "middle_initial": "A",
+        "birthdate": "01/15/2010"
+      }},
+      "required_vaccines": {{
+        "DTaP": {{
+          "date_1": "01/01/2011",
+          "date_2": "03/01/2011",
+          "date_3": "05/01/2011",
+          "date_4": "08/01/2011",
+          "date_5": "12/01/2011"
+        }},
+        "Tdap": {{
+          "date_1": "01/01/2017"
+        }},
+        "DT_or_Td": {{
+          "date_1": "N/A"
+        }},
+        "Hepatitis_B": {{
+          "date_1": "02/01/2011",
+          "date_2": "06/01/2011",
+          "date_3": "10/01/2011"
+        }},
+        "Hib": {{
+          "date_1": "N/A"
+        }},
+        "IPV": {{
+          "date_1": "02/01/2011",
+          "date_2": "04/01/2011",
+          "date_3": "06/01/2011",
+          "date_4": "09/01/2011"
+        }},
+        "OPV": {{
+          "date_1": "N/A"
+        }},
+        "MMR": {{
+          "date_1": "02/01/2012",
+          "date_2": "04/01/2012"
+        }},
+        "PCV_or_PPSV": {{
+          "date_1": "N/A"
+        }},
+        "Varicella": {{
+          "date_1": "03/01/2012"
+        }}
+      }},
+      "recommended_vaccines": {{
+        "COVID_19": "N/A",
+        "Flu": "N/A",
+        "Hepatitis_A": "N/A",
+        "HPV": "N/A",
+        "MCV_or_MPSV": "N/A",
+        "MenB": "N/A",
+        "Rotavirus": "N/A"
+      }},
+      "parent_guardian_signature": {{
+        "signature": "John Doe",
+        "date": "09/01/2023"
+      }},
+      "conditional_status": {{
+        "status": false,
+        "note": "All vaccinations complete"
+      }},
+      "health_care_provider": {{
+        "name": "Dr. Smith",
+        "signature": "Dr. Smith",
+        "date": "09/01/2023"
+      }},
+      "documentation_of_disease_immunity": {{
+        "verified": true,
+        "diseases": [
+          "Varicella"
+        ]
+      }}
+    }}
+
+    Extract and format the data from the following text:
+
+    {translated_texts}
+    """
+
+    # Call OpenAI API to extract vaccination information
+    response = openai.chat.completions.create(
+        model="gpt-3.5-turbo-0125",
+        response_format={ "type": "json_object" },
+        messages=[
+            {"role": "system", "content": "Cluster texts into vaccination details:"},
+            {"role": "user", "content": prompt}
+        ]
+    )
+
+    organized_json = response
+
+    return organized_json
+
 # main function
 def text_clustering(path):
-    translated_texts = detect_and_translate_texts(path)
-    cluster_texts = cluster_personal_info_and_vaccination_info(translated_texts["texts_with_newline"])
+    translated_texts = detect_and_translate_texts(path)["texts_with_newline"]
+    # cluster_texts = cluster_personal_info_and_vaccination_info(translated_texts["texts_with_newline"])
 
-    # Ground truth (reference) text
-    ground_truth = "Diphtheria tetanus pertussis Measles mumps rubella"
+    # # Ground truth (reference) text
+    # ground_truth = "Diphtheria tetanus pertussis Measles mumps rubella"
 
-    # OCR result from your provided data
-    ocr_result = translated_texts["texts_without_newline"]
+    # # OCR result from your provided data
+    # ocr_result = translated_texts["texts_without_newline"]
 
-    # Calculate CER, WER, and get matched words
-    cer, wer, matched_words = calculate_cer_and_wer(ocr_result, ground_truth)
+    # # Calculate CER, WER, and get matched words
+    # cer, wer, matched_words = calculate_cer_and_wer(ocr_result, ground_truth)
 
-    print(f"CER: {cer:.4f}")
-    print(f"WER: {wer:.4f}")
-    print(f"Matched words: {', '.join(matched_words)}")
+    # print(f"CER: {cer:.4f}")
+    # print(f"WER: {wer:.4f}")
+    # print(f"Matched words: {', '.join(matched_words)}")
     # print("\n")
 
-    formatted_texts = format_texts(cluster_texts["personal_info"], cluster_texts["vaccination_info"])
-    draw_texts_on_image(path,formatted_texts, "result.png")
+    # print(translated_texts)
+    formatted_texts = cis(translated_texts).choices[0].message.content
+    # print("formatted texts", formatted_texts)
+    return formatted_texts
+    # draw_texts_on_image(path,formatted_texts, "result.png")
