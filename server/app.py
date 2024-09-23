@@ -6,7 +6,6 @@ from dotenv import load_dotenv
 import os
 import io
 from flask_cors import CORS
-from textDetect import detect_text_and_draw
 from textClustering import text_clustering
 from pdf2image import convert_from_path, convert_from_bytes  # type: ignore
 from pdf2image.exceptions import (  # type: ignore
@@ -68,15 +67,9 @@ def upload_file():
 
         # Process the file
         if file.filename.endswith(".png"):
-            text_clustering(input_file_path)
-            with open("result.png", "rb") as image_file:
-                image_blob = image_file.read()
-            return send_file(
-                io.BytesIO(image_blob),
-                mimetype="image/png",
-                as_attachment=True,
-                download_name="processed_image.png",
-            )
+            cis_formatted = text_clustering(input_file_path)
+            print(cis_formatted)
+            return cis_formatted
         elif file.filename.endswith(".pdf"):
             # Add PDF processing logic here
             # For example, you might convert the PDF to images and then process
@@ -84,51 +77,20 @@ def upload_file():
             image = convert_from_path(input_file_path, fmt="png")
             image[0].save(f"converted_record.png", "PNG")
 
-            text_clustering(f"converted_record.png")
-            with open("result.png", "rb") as image_file:
-                image_blob = image_file.read()
-            return send_file(
-                io.BytesIO(image_blob),
-                mimetype="image/png",
-                as_attachment=True,
-                download_name="processed_image.png",
-            )
+            cis_formatting = text_clustering(f"converted_record.png")
+            # with open("result.png", "rb") as image_file:
+            #     image_blob = image_file.read()
+            # return send_file(
+            #     io.BytesIO(image_blob),
+            #     mimetype="image/png",
+            #     as_attachment=True,
+            #     download_name="processed_image.png",
+            # )
+            
 
         return "File processed successfully", 200
     else:
         return "File is not a PNG or PDF image", 400
-
-
-@app.route("/detect-text-and-draw", methods=["POST"])
-def detect_text_and_draw_endpoint():
-    if "file" not in request.files:
-        return jsonify({"error": "No file part"}), 400
-
-    file = request.files["file"]
-
-    if file.filename == "":
-        return jsonify({"error": "No selected file"}), 400
-
-    if file and file.filename.endswith(".png"):
-        file_path = os.path.join(UPLOAD_FOLDER, file.filename)
-        file.save(file_path)
-
-        # Call the function from textDetect.py
-        detect_text_and_draw(file_path)
-
-        # Return the processed image
-        with open("result.png", "rb") as image_file:
-            image_blob = image_file.read()
-
-        return send_file(
-            io.BytesIO(image_blob),
-            mimetype="image/png",
-            as_attachment=True,
-            download_name="processed_image.png",
-        )
-
-    return jsonify({"error": "File is not a PNG image"}), 400
-
-
+    
 if __name__ == "__main__":
     app.run(debug=True)
