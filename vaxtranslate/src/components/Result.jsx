@@ -1,5 +1,6 @@
 import React from "react";
 import { useLocation } from "react-router-dom";
+import CISResult from "./CISResult";
 
 const Result = () => {
   const location = useLocation();
@@ -19,8 +20,8 @@ const Result = () => {
             marginTop: "50px",
           }}
         >
-          <h2 className="text-center">Translation Result</h2>
-        
+          <h2 className="text-center">Certificate of Immunization (CIS)</h2>
+          <CISResult cis={cis} />
         </div>
         
       </div>
