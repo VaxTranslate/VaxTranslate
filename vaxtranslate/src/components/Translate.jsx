@@ -227,7 +227,7 @@ const Translate = () => {
 
       updateProcessingStatus('process', 'processing');
       const response = await axios.post(
-        "http://127.0.0.1:5000/upload",
+        "https://vaxtranslatehost.ddns.net/upload",
         formData,
         {
           responseType: "json",
