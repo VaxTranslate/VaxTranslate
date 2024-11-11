@@ -1,67 +1,92 @@
-import React, { useState } from 'react';
-import '../styles/login.css';
+import React, { useState } from "react";
+import { Mail, Lock, User as UserIcon } from "lucide-react";
 
 const LoginPage = () => {
   const [isLogin, setIsLogin] = useState(true);
 
-  const toggleForm = () => {
-    setIsLogin(!isLogin);
-  }
+  const InputField = ({ icon: Icon, type, placeholder }) => (
+    <div className="relative">
+      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+        <Icon className="h-5 w-5 text-gray-400" />
+      </div>
+      <input
+        type={type}
+        className="block w-full pl-11 pr-4 py-3 border-0 rounded-xl bg-gray-50 text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all duration-200"
+        placeholder={placeholder}
+      />
+    </div>
+  );
 
   return (
-    <section className="vh-100 d-flex align-items-center justify-content-center login-background">
-      <div className="container">
-        <div className="row justify-content-center">
-          <div className="col-md-6 text-black">
-            <div className="text-center mb-4">
-              <i className="fas fa-crow fa-2x" style={{ color: '#709085' }}></i>
-            </div>
-            <div className="card shadow-lg p-4" style={{ borderRadius: '20px' }}>
-              <form>
-                <h3 className="fw-normal mb-3 pb-3" style={{ letterSpacing: '1px' }}>
-                  {isLogin ? 'Log in' : 'Sign up'}
-                </h3>
-                {!isLogin && (
-                  <div data-mdb-input-init className="form-outline mb-4">
-                    <input type="text" id="form3Example1" className="form-control form-control-lg" />
-                    <label className="form-label" htmlFor="form3Example1">Full Name</label>
-                  </div>
-                )}
-                <div data-mdb-input-init className="form-outline mb-4">
-                  <input type="email" id={isLogin ? "form2Example18" : "form3Example2"} className="form-control form-control-lg" />
-                  <label className="form-label" htmlFor={isLogin ? "form2Example18" : "form3Example2"}>Email address</label>
-                </div>
-                <div data-mdb-input-init className="form-outline mb-4">
-                  <input type="password" id={isLogin ? "form2Example28" : "form3Example3"} className="form-control form-control-lg" />
-                  <label className="form-label" htmlFor={isLogin ? "form2Example28" : "form3Example3"}>Password</label>
-                </div>
-                <div className="pt-1 mb-4">
-                  <button
-                    data-mdb-button-init
-                    data-mdb-ripple-init
-                    className="btn custom-btn-info btn-lg btn-block" 
-                    type="button"
-                    style={{ borderRadius: '30px' }}
-                  >
-                    {isLogin ? 'Login' : 'Sign up'}
-                  </button>
-                </div>
-                {isLogin ? (
-                  <p className="small mb-5 pb-lg-2"><a className="text-muted" href="#!">Forgot password?</a></p>
-                ) : null}
-                <p>
-                  {isLogin ? "Don't have an account?" : 'Already have an account?'}
-                  <a href="#!" className="link-info" onClick={toggleForm}>
-                    {isLogin ? ' Register here' : ' Log in here'}
-                  </a>
-                </p>
-              </form>
-            </div>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-white to-blue-50">
+      <div className="max-w-md w-full space-y-8">
+        <div className="bg-white/70 backdrop-blur-xl shadow-xl rounded-2xl p-8 border border-gray-100">
+          <div className="text-center">
+            <h2 className="mt-2 text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-blue-400">
+              {isLogin ? "Welcome back" : "Create account"}
+            </h2>
+            <p className="mt-2 text-sm text-gray-500">
+              {isLogin
+                ? "Sign in to access your account"
+                : "Sign up to get started"}
+            </p>
           </div>
+
+          <form className="mt-8 space-y-6">
+            {!isLogin && (
+              <InputField
+                icon={UserIcon}
+                type="text"
+                placeholder="Full Name"
+              />
+            )}
+            <InputField
+              icon={Mail}
+              type="email"
+              placeholder="Email address"
+            />
+            <InputField
+              icon={Lock}
+              type="password"
+              placeholder="Password"
+            />
+
+            <div>
+              <button
+                type="submit"
+                className="group relative w-full flex justify-center py-3 px-4 rounded-xl text-white bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-500 hover:to-blue-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 font-medium"
+              >
+                {isLogin ? "Sign in" : "Create account"}
+              </button>
+            </div>
+
+            {isLogin && (
+              <div className="text-sm text-center">
+                <a
+                  href="#"
+                  className="text-blue-600 hover:text-blue-500 font-medium"
+                >
+                  Forgot your password?
+                </a>
+              </div>
+            )}
+
+            <div className="text-sm text-center">
+              <button
+                type="button"
+                onClick={() => setIsLogin(!isLogin)}
+                className="text-blue-600 hover:text-blue-500 font-medium"
+              >
+                {isLogin
+                  ? "Need an account? Sign up"
+                  : "Already have an account? Sign in"}
+              </button>
+            </div>
+          </form>
         </div>
       </div>
-    </section>
+    </div>
   );
-}
+};
 
 export default LoginPage;

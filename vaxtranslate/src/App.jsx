@@ -5,20 +5,23 @@ import Home from "./components/Home";
 import Navbar from "./components/Navbar";
 import LoginPage from "./components/Login";
 import Result from "./components/Result";
+import Footer from "./components/Footer";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import "./App.css";
+
 function App() {
   return (
     <Router>
-      <div className="App">
+      <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 via-white to-blue-50">
         <Navbar />
-        <Routes>
-          {/* <Route path="/translate" element={<Translate />} />
-          <Route path="/dashboard" element={<Dashboard />} /> */}
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/result" element={<Result />} />
-          <Route path="/" element={<Translate />} />
-        </Routes>
+        <main className="flex-grow flex flex-col">
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/result" element={<Result />} />
+            <Route path="/" element={<Translate />} />
+          </Routes>
+        </main>
+        <Footer />
       </div>
     </Router>
   );

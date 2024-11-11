@@ -1,154 +1,249 @@
-import * as React from "react";
-import { CompactTable } from "@table-library/react-table-library/compact";
-import { useTheme } from "@table-library/react-table-library/theme";
-import { getTheme } from "@table-library/react-table-library/baseline";
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Download, Printer, FileText, AlertCircle } from 'lucide-react';
+
+const InputField = React.memo(({ value, onChange, className = "" }) => (
+  <input
+    type="text"
+    value={value ?? ""}
+    onChange={onChange}
+    className={`w-full px-2 py-1 border border-transparent hover:border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded transition-colors ${className}`}
+  />
+));
+
+const TableHeader = React.memo(({ children }) => (
+  <div className="bg-gray-100 px-4 py-2 font-semibold text-gray-700 rounded-t-lg">
+    {children}
+  </div>
+));
 
 const CISResult = ({ cis }) => {
-  const [data, setData] = React.useState(null);
+  const [data, setData] = useState(cis);
 
-  React.useEffect(() => {
-    setData(cis);
-  }, [cis]);
+  const handleUpdate = useCallback((value, vaccine, dose, tableType) => {
+    setData(prevData => ({
+      ...prevData,
+      [tableType]: {
+        ...prevData[tableType],
+        [vaccine]: typeof prevData[tableType][vaccine] === "object"
+          ? {
+              ...prevData[tableType][vaccine],
+              [dose]: value,
+            }
+          : value,
+      }
+    }));
+  }, []);
 
-  const theme = useTheme(getTheme());
+  const handleChildUpdate = useCallback((value, field) => {
+    setData(prevData => ({
+      ...prevData,
+      child: {
+        ...prevData.child,
+        [field]: value,
+      }
+    }));
+  }, []);
+
+  const handleExport = useCallback((type) => {
+    if (type === 'print') {
+      window.print();
+      return;
+    }
+
+    // CSV Export logic
+    const getFormattedDate = () => {
+      return new Date().toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }).replace(/\//g, '-');
+    };
+
+    const escapeField = (field) => `"${String(field ?? '').replace(/"/g, '""')}"`;
+
+    const formatVaccineData = (vaccines) => {
+      const header = ['Vaccine'];
+      const rows = [];
+      
+      const doseNames = new Set();
+      Object.values(vaccines).forEach(dates => {
+        if (typeof dates === 'object') {
+          Object.keys(dates).forEach(dose => doseNames.add(dose));
+        }
+      });
+      
+      header.push(...Array.from(doseNames));
+      
+      Object.entries(vaccines).forEach(([name, dates]) => {
+        const row = [name];
+        Array.from(doseNames).forEach(dose => {
+          row.push((typeof dates === 'object' ? dates[dose] : dates) ?? '');
+        });
+        rows.push(row);
+      });
+      
+      return [header, ...rows].map(row => row.map(escapeField).join(',')).join('\n');
+    };
+
+    const csvContent = [
+      'Child Information',
+      ['Field', 'Value'].map(escapeField).join(','),
+      ...Object.entries({
+        'First Name': data.child.first_name,
+        'Middle Initial': data.child.middle_initial,
+        'Last Name': data.child.last_name,
+        'Birthdate': data.child.birthdate,
+      }).map(([k, v]) => [escapeField(k), escapeField(v)].join(',')),
+      '',
+      'Required Vaccinations',
+      formatVaccineData(data.required_vaccines),
+      '',
+      'Recommended Vaccinations',
+      formatVaccineData(data.recommended_vaccines),
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `vaccination-record-${getFormattedDate()}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  }, [data]);
+
+  const renderTable = useCallback((columns, tableData, title) => (
+    <div className="mb-8 bg-white rounded-lg shadow-sm border border-gray-200">
+      <TableHeader>{title}</TableHeader>
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="bg-gray-50">
+              {columns.map((col) => (
+                <th key={col.key} className="px-4 py-2 text-left text-sm font-medium text-gray-600">
+                  {col.label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {tableData.map((row, rowIndex) => (
+              <tr 
+                key={row.key} 
+                className={`border-t border-gray-100 ${rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
+              >
+                {columns.map((col) => (
+                  <td key={`${row.key}-${col.key}`} className="px-4 py-2">
+                    {col.renderCell(row)}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  ), []);
+
+  const { childColumns, childData, requiredColumns, recommendedColumns, requiredData, recommendedData } = useMemo(() => {
+    if (!data) return {};
+
+    const createColumns = (vaccineData, tableType) => {
+      const firstVaccine = Object.values(vaccineData)[0];
+      const doses = typeof firstVaccine === 'object' ? Object.keys(firstVaccine) : ['date'];
+
+      return [
+        {
+          label: "Vaccine",
+          key: `${tableType}-vaccine-name`,
+          renderCell: (item) => <span className="font-medium">{item.name}</span>,
+        },
+        ...doses.map((dose, index) => ({
+          label: dose,
+          key: `${tableType}-${dose}-${index}`,
+          renderCell: (item) => (
+            <InputField
+              value={item.doses[dose]}
+              onChange={(e) => handleUpdate(e.target.value, item.name, dose, tableType)}
+            />
+          ),
+        })),
+      ];
+    };
+
+    const mapVaccinationData = (vaccineData, tableType) => {
+      return Object.keys(vaccineData).map((vaccine, index) => ({
+        name: vaccine,
+        doses: typeof vaccineData[vaccine] === 'object'
+          ? { ...vaccineData[vaccine] }
+          : { date: vaccineData[vaccine] ?? "" },
+        key: `${tableType}-${vaccine}-${index}`,
+      }));
+    };
+
+    return {
+      childColumns: [
+        { label: "Field", key: "field-name", renderCell: (item) => item.field },
+        {
+          label: "Value",
+          key: "field-value",
+          renderCell: (item) => (
+            <InputField
+              value={item.value}
+              onChange={(e) => handleChildUpdate(e.target.value, item.fieldKey)}
+            />
+          ),
+        },
+      ],
+      childData: [
+        { field: "First Name", value: data.child.first_name, fieldKey: "first_name" },
+        { field: "Middle Initial", value: data.child.middle_initial, fieldKey: "middle_initial" },
+        { field: "Last Name", value: data.child.last_name, fieldKey: "last_name" },
+        { field: "Birthdate", value: data.child.birthdate, fieldKey: "birthdate" },
+      ].map((item, index) => ({
+        ...item,
+        key: `child-${index}`,
+      })),
+      requiredColumns: createColumns(data.required_vaccines, "required_vaccines"),
+      recommendedColumns: createColumns(data.recommended_vaccines, "recommended_vaccines"),
+      requiredData: mapVaccinationData(data.required_vaccines, "required_vaccines"),
+      recommendedData: mapVaccinationData(data.recommended_vaccines, "recommended_vaccines"),
+    };
+  }, [data, handleUpdate, handleChildUpdate]);
 
   if (!data) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      </div>
+    );
   }
 
-  const { required_vaccines: requiredVaccinations, recommended_vaccines: recommendedVaccinations, child } = data;
-
-  // Create columns for the child information table
-  const childColumns = [
-    {
-      label: "Field",
-      key: "field-name",
-      renderCell: (item) => item.field,
-    },
-    {
-      label: "Value",
-      key: "field-value",
-      renderCell: (item) => (
-        <input
-          type={item.type}
-          value={item.value !== "N/A" ? item.value : ""}
-          onChange={(event) => handleChildUpdate(event.target.value, item.fieldKey)}
-          style={{ width: "100%", border: "none", padding: 0, margin: 0 }}
-        />
-      ),
-    },
-  ];
-
-  // Map child data to match the CompactTable format
-  const childData = [
-    { field: "First Name", value: child.first_name, fieldKey: "first_name", type: "text" },
-    { field: "Middle Initial", value: child.middle_initial, fieldKey: "middle_initial", type: "text" },
-    { field: "Last Name", value: child.last_name, fieldKey: "last_name", type: "text" },
-    { field: "Birthdate", value: child.birthdate, fieldKey: "birthdate", type: "text" },
-  ].map((item, index) => ({
-    ...item,
-    key: `child-${index}`,
-  }));
-
-  // Create columns for doses dynamically based on the first vaccine object
-  const createColumns = (vaccineData, tableType) => {
-    const firstVaccine = Object.values(vaccineData)[0];
-    const doses = typeof firstVaccine === "object" ? Object.keys(firstVaccine) : ["date"]; // Handle cases where vaccine has a single date value
-
-    return [
-      {
-        label: "Vaccine",
-        key: `${tableType}-vaccine-name`, // Unique key for the vaccine name column with tableType
-        renderCell: (item) => item.name,
-      },
-      ...doses.map((dose, index) => ({
-        label: dose,
-        key: `${tableType}-${dose}-${index}`, // Unique key for each dose column with tableType
-        renderCell: (item) => (
-          <input
-            key={`${tableType}-${item.name}-${dose}-${index}`} // Unique key for each dose input field with tableType
-            type="text"
-            style={{
-              width: "100%",
-              border: "none",
-              fontSize: "1rem",
-              padding: 0,
-              margin: 0,
-            }}
-            value={item.doses[dose] && item.doses[dose] !== "N/A" ? item.doses[dose] : ""} // Show empty if "N/A" or missing
-            onChange={(event) => handleUpdate(event.target.value, item.name, dose, tableType)}
-          />
-        ),
-      })),
-    ];
-  };
-
-  // Map the vaccination data to a format suitable for the table
-  const mapVaccinationData = (vaccineData, tableType) => {
-    return Object.keys(vaccineData).map((vaccine, index) => ({
-      name: vaccine,
-      doses: typeof vaccineData[vaccine] === "object" ? fillMissingDoses(vaccineData[vaccine]) : { date: vaccineData[vaccine] || "" },
-      key: `${tableType}-${vaccine}-${index}`, // Adding unique key for each vaccine with tableType
-    }));
-  };
-
-  // Fills in any missing doses or values with empty strings
-  const fillMissingDoses = (doses) => {
-    const filledDoses = { ...doses };
-    for (let key in filledDoses) {
-      if (!filledDoses[key] || filledDoses[key] === "N/A") {
-        filledDoses[key] = ""; // Replace "N/A" or missing values with an empty string
-      }
-    }
-    return filledDoses;
-  };
-
-  // Updates the data when a user changes a value for vaccines
-  const handleUpdate = (value, vaccine, dose, tableType) => {
-    setData((prevState) => ({
-      ...prevState,
-      [tableType]: {
-        ...prevState[tableType],
-        [vaccine]: {
-          ...prevState[tableType][vaccine],
-          [dose]: value,
-        },
-      },
-    }));
-  };
-
-  // Updates the data when a user changes child details
-  const handleChildUpdate = (value, field) => {
-    setData((prevState) => ({
-      ...prevState,
-      child: {
-        ...prevState.child,
-        [field]: value,
-      },
-    }));
-  };
-
-  // Define columns for both required and recommended vaccinations
-  const requiredColumns = createColumns(requiredVaccinations, "required_vaccines");
-  const recommendedColumns = createColumns(recommendedVaccinations, "recommended_vaccines");
-
-  // Map the vaccination data for the tables
-  const requiredData = mapVaccinationData(requiredVaccinations, "required_vaccines");
-  const recommendedData = mapVaccinationData(recommendedVaccinations, "recommended_vaccines");
-
   return (
-    <div style={{ margin: '0 auto', marginTop: '2%' }}>
-      {/* Child Info Table */}
-      <h4>Child Information</h4>
-      <CompactTable columns={childColumns} data={{ nodes: childData }} theme={theme} />
+    <div className="max-w-6xl mx-auto p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold text-gray-800">Vaccination Record</h1>
+        <div className="flex gap-2">
+          <button
+            onClick={() => handleExport('csv')}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+          >
+            <FileText size={18} />
+            Export CSV
+          </button>
+          <button
+            onClick={() => handleExport('print')}
+            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+          >
+            <Printer size={18} />
+            Print
+          </button>
+        </div>
+      </div>
 
-      {/* Required Vaccinations Table */}
-      <h4>Required Vaccinations for Child Care or Preschool Entry</h4>
-      <CompactTable columns={requiredColumns} data={{ nodes: requiredData }} theme={theme} />
-
-      {/* Recommended Vaccinations Table */}
-      <h4>Recommended Vaccinations</h4>
-      <CompactTable columns={recommendedColumns} data={{ nodes: recommendedData }} theme={theme} />
+      <div className="space-y-6">
+        {renderTable(childColumns, childData, "Child Information")}
+        {renderTable(requiredColumns, requiredData, "Required Vaccinations for Child Care or Preschool Entry")}
+        {renderTable(recommendedColumns, recommendedData, "Recommended Vaccinations")}
+      </div>
     </div>
   );
 };
