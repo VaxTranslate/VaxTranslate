@@ -258,11 +258,11 @@ const Translate = () => {
               </div>
             </div>
             <h1 className="text-4xl md:text-5xl font-bold mb-4">
-              Document Translation Made Simple
+            Your Trusted Partner for Vaccine Record Translation
             </h1>
             <p className="text-xl text-blue-100 max-w-2xl mx-auto">
-              Transform your documents instantly with our AI-powered translation service.
-              Fast, accurate, and secure.
+            Instantly translate vaccination records and documents with precision.
+            Powered by AI for fast, secure, and accurate results.
             </p>
           </div>
           
@@ -463,9 +463,9 @@ const Translate = () => {
 
         <div className="mb-16">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-800 mb-4">Why Choose Our Service</h2>
+            <h2 className="text-3xl font-bold text-gray-800 mb-4">Why Choose Us for Vaccination Record Translations</h2>
             <p className="text-gray-600 max-w-2xl mx-auto">
-              Experience the next generation of document translation with our advanced AI-powered platform
+            Access fast, reliable, and AI-driven translation for all your vaccination-related documents.
             </p>
           </div>
 
