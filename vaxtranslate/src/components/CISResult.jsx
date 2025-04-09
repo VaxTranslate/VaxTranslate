@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Download, Printer, FileText, AlertCircle } from 'lucide-react';
+import { Download, Printer, FileText, AlertCircle, Info, Database, BrainCircuit } from 'lucide-react';
 
 const InputField = React.memo(({ value, onChange, className = "" }) => (
   <input
@@ -16,22 +16,68 @@ const TableHeader = React.memo(({ children }) => (
   </div>
 ));
 
+// Show AI by default if there are dates, DB if it's a database match
+const TranslationSourceIndicator = React.memo(({ source, hasValidDates }) => {
+  if (!hasValidDates) return null;
+  
+  // Default to AI for any vaccine with dates, unless it's explicitly from dataset
+  const isDatasetMatch = source === 'dataset';
+  
+  return (
+    <span className={`ml-1 text-xs rounded-full px-1 font-medium ${
+      isDatasetMatch ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+    }`}>
+      {isDatasetMatch ? 'DB' : 'AI'}
+    </span>
+  );
+});
+
 const CISResult = ({ cis }) => {
   const [data, setData] = useState(cis);
 
+  // Update vaccine data without losing metadata
   const handleUpdate = useCallback((value, vaccine, dose, tableType) => {
-    setData(prevData => ({
-      ...prevData,
-      [tableType]: {
-        ...prevData[tableType],
-        [vaccine]: typeof prevData[tableType][vaccine] === "object"
-          ? {
-              ...prevData[tableType][vaccine],
+    setData(prevData => {
+      const currentVaccine = prevData[tableType][vaccine];
+      
+      // If it's a regular object (not a metadata object)
+      if (typeof currentVaccine === 'object' && !currentVaccine.__translationMeta) {
+        return {
+          ...prevData,
+          [tableType]: {
+            ...prevData[tableType],
+            [vaccine]: {
+              ...currentVaccine,
               [dose]: value,
             }
-          : value,
+          }
+        };
       }
-    }));
+      
+      // If it has metadata
+      if (typeof currentVaccine === 'object' && currentVaccine.__translationMeta) {
+        return {
+          ...prevData,
+          [tableType]: {
+            ...prevData[tableType],
+            [vaccine]: {
+              ...currentVaccine,
+              [dose]: value,
+              __translationMeta: currentVaccine.__translationMeta
+            }
+          }
+        };
+      }
+      
+      // If it's a simple string
+      return {
+        ...prevData,
+        [tableType]: {
+          ...prevData[tableType],
+          [vaccine]: value
+        }
+      };
+    });
   }, []);
 
   const handleChildUpdate = useCallback((value, field) => {
@@ -62,23 +108,30 @@ const CISResult = ({ cis }) => {
     const escapeField = (field) => `"${String(field ?? '').replace(/"/g, '""')}"`;
 
     const formatVaccineData = (vaccines) => {
-      const header = ['Vaccine'];
+      const header = ['Vaccine', 'Date 1', 'Date 2', 'Date 3'];
       const rows = [];
-      
-      const doseNames = new Set();
-      Object.values(vaccines).forEach(dates => {
-        if (typeof dates === 'object') {
-          Object.keys(dates).forEach(dose => doseNames.add(dose));
-        }
-      });
-      
-      header.push(...Array.from(doseNames));
       
       Object.entries(vaccines).forEach(([name, dates]) => {
         const row = [name];
-        Array.from(doseNames).forEach(dose => {
-          row.push((typeof dates === 'object' ? dates[dose] : dates) ?? '');
-        });
+        if (typeof dates === 'object') {
+          // Get up to 3 date fields, excluding __translationMeta
+          const dateFields = Object.keys(dates)
+            .filter(key => key !== '__translationMeta')
+            .slice(0, 3);
+          
+          // Add up to 3 dates
+          for (let i = 0; i < 3; i++) {
+            // Replace "N/A" with empty string
+            let dateValue = dateFields[i] ? dates[dateFields[i]] || '' : '';
+            if (dateValue === "N/A") dateValue = '';
+            row.push(dateValue);
+          }
+        } else {
+          // Replace "N/A" with empty string
+          let dateValue = dates;
+          if (dateValue === "N/A") dateValue = '';
+          row.push(dateValue, '', '');
+        }
         rows.push(row);
       });
       
@@ -98,8 +151,8 @@ const CISResult = ({ cis }) => {
       'Required Vaccinations',
       formatVaccineData(data.required_vaccines),
       '',
-      'Recommended Vaccinations',
-      formatVaccineData(data.recommended_vaccines),
+      'Other Vaccinations',
+      formatVaccineData(data.other_vaccines || {}),
     ].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -110,73 +163,179 @@ const CISResult = ({ cis }) => {
     URL.revokeObjectURL(link.href);
   }, [data]);
 
-  const renderTable = useCallback((columns, tableData, title) => (
-    <div className="mb-8 bg-white rounded-lg shadow-sm border border-gray-200">
-      <TableHeader>{title}</TableHeader>
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr className="bg-gray-50">
-              {columns.map((col) => (
-                <th key={col.key} className="px-4 py-2 text-left text-sm font-medium text-gray-600">
-                  {col.label}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {tableData.map((row, rowIndex) => (
-              <tr 
-                key={row.key} 
-                className={`border-t border-gray-100 ${rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
-              >
+  const renderTable = useCallback((columns, tableData, title) => {
+    // Only render the table if there's data
+    if (!tableData || tableData.length === 0) return null;
+    
+    return (
+      <div className="mb-8 bg-white rounded-lg shadow-sm border border-gray-200">
+        <TableHeader>{title}</TableHeader>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-gray-50">
                 {columns.map((col) => (
-                  <td key={`${row.key}-${col.key}`} className="px-4 py-2">
-                    {col.renderCell(row)}
-                  </td>
+                  <th key={col.key} className="px-4 py-2 text-left text-sm font-medium text-gray-600">
+                    {col.label}
+                  </th>
                 ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {tableData.map((row, rowIndex) => (
+                <tr 
+                  key={row.key} 
+                  className={`border-t border-gray-100 ${rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
+                >
+                  {columns.map((col) => (
+                    <td key={`${row.key}-${col.key}`} className="px-4 py-2">
+                      {col.renderCell(row)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
-  ), []);
+    );
+  }, []);
 
-  const { childColumns, childData, requiredColumns, recommendedColumns, requiredData, recommendedData } = useMemo(() => {
+  const { childColumns, childData, requiredColumns, otherColumns, requiredData, otherData } = useMemo(() => {
     if (!data) return {};
 
-    const createColumns = (vaccineData, tableType) => {
-      const firstVaccine = Object.values(vaccineData)[0];
-      const doses = typeof firstVaccine === 'object' ? Object.keys(firstVaccine) : ['date'];
+    // Process and normalize N/A values to empty strings
+    const normalizeVaccineData = (vaccines) => {
+      const result = {};
+      
+      Object.entries(vaccines).forEach(([name, value]) => {
+        if (typeof value === 'object') {
+          const newValue = { ...value };
+          
+          // Convert N/A to empty string for each dose
+          Object.keys(newValue).forEach(key => {
+            if (key !== '__translationMeta' && newValue[key] === 'N/A') {
+              newValue[key] = '';
+            }
+          });
+          
+          result[name] = newValue;
+        } else if (value === 'N/A') {
+          result[name] = '';
+        } else {
+          result[name] = value;
+        }
+      });
+      
+      return result;
+    };
+    
+    // Create other vaccines object from recommended vaccines
+    const otherVaccines = data.recommended_vaccines ? normalizeVaccineData(data.recommended_vaccines) : {};
+    
+    // Normalize required vaccines
+    const normalizedRequiredVaccines = data.required_vaccines ? normalizeVaccineData(data.required_vaccines) : {};
 
+    const createColumns = (tableType) => {
+      // Always use these standard 3 date columns
       return [
         {
           label: "Vaccine",
           key: `${tableType}-vaccine-name`,
-          renderCell: (item) => <span className="font-medium">{item.name}</span>,
+          renderCell: (item) => {
+            // Check if any dates are non-empty
+            const hasValidDates = Object.values(item.doses).some(value => value && value !== '');
+            
+            return (
+              <div className="flex items-center">
+                <span className="font-medium">{item.name}</span>
+                <TranslationSourceIndicator 
+                  source={item.translationMeta?.source}
+                  hasValidDates={hasValidDates}
+                />
+              </div>
+            );
+          },
         },
-        ...doses.map((dose, index) => ({
-          label: dose,
-          key: `${tableType}-${dose}-${index}`,
+        {
+          label: "Date 1",
+          key: `${tableType}-date-1`,
           renderCell: (item) => (
             <InputField
-              value={item.doses[dose]}
-              onChange={(e) => handleUpdate(e.target.value, item.name, dose, tableType)}
+              value={item.doses.date_1}
+              onChange={(e) => handleUpdate(e.target.value, item.name, 'date_1', tableType)}
             />
           ),
-        })),
+        },
+        {
+          label: "Date 2",
+          key: `${tableType}-date-2`,
+          renderCell: (item) => (
+            <InputField
+              value={item.doses.date_2}
+              onChange={(e) => handleUpdate(e.target.value, item.name, 'date_2', tableType)}
+            />
+          ),
+        },
+        {
+          label: "Date 3",
+          key: `${tableType}-date-3`,
+          renderCell: (item) => (
+            <InputField
+              value={item.doses.date_3}
+              onChange={(e) => handleUpdate(e.target.value, item.name, 'date_3', tableType)}
+            />
+          ),
+        },
       ];
     };
 
     const mapVaccinationData = (vaccineData, tableType) => {
-      return Object.keys(vaccineData).map((vaccine, index) => ({
-        name: vaccine,
-        doses: typeof vaccineData[vaccine] === 'object'
-          ? { ...vaccineData[vaccine] }
-          : { date: vaccineData[vaccine] ?? "" },
-        key: `${tableType}-${vaccine}-${index}`,
-      }));
+      return Object.keys(vaccineData).map((vaccine, index) => {
+        const vacData = vaccineData[vaccine];
+        let doses = { date_1: '', date_2: '', date_3: '' };
+        let translationMeta = null;
+        
+        if (typeof vacData === 'object') {
+          // Extract translation metadata if it exists
+          if (vacData.__translationMeta) {
+            translationMeta = vacData.__translationMeta;
+          }
+          
+          // Map existing dose data to our standard 3 date fields
+          const dateKeys = Object.keys(vacData).filter(key => key !== '__translationMeta');
+          
+          if (dateKeys.length > 0) {
+            // If we have date entries with explicit keys like 'date_1', 'date_2', etc.
+            dateKeys.forEach(key => {
+              if (key.match(/date_[1-3]/) || key.match(/dose_?[1-3]/i)) {
+                // Extract the digit from keys like 'date_1', 'dose_1', etc.
+                const match = key.match(/[1-3]$/);
+                if (match) {
+                  const digit = match[0];
+                  doses[`date_${digit}`] = vacData[key];
+                }
+              } else if (dateKeys.length <= 3) {
+                // If we have other named fields and total count is 3 or less, map sequentially
+                const index = dateKeys.indexOf(key);
+                if (index >= 0 && index < 3) {
+                  doses[`date_${index + 1}`] = vacData[key];
+                }
+              }
+            });
+          }
+        } else if (typeof vacData === 'string') {
+          // If it's a direct string value
+          doses.date_1 = vacData;
+        }
+        
+        return {
+          name: vaccine,
+          doses: doses,
+          translationMeta: translationMeta,
+          key: `${tableType}-${vaccine}-${index}`,
+        };
+      });
     };
 
     return {
@@ -202,12 +361,23 @@ const CISResult = ({ cis }) => {
         ...item,
         key: `child-${index}`,
       })),
-      requiredColumns: createColumns(data.required_vaccines, "required_vaccines"),
-      recommendedColumns: createColumns(data.recommended_vaccines, "recommended_vaccines"),
-      requiredData: mapVaccinationData(data.required_vaccines, "required_vaccines"),
-      recommendedData: mapVaccinationData(data.recommended_vaccines, "recommended_vaccines"),
+      requiredColumns: createColumns("required_vaccines"),
+      otherColumns: createColumns("other_vaccines"),
+      requiredData: mapVaccinationData(normalizedRequiredVaccines, "required_vaccines"),
+      otherData: mapVaccinationData(otherVaccines, "other_vaccines"),
     };
   }, [data, handleUpdate, handleChildUpdate]);
+
+  // Simple legend for translation sources
+  const renderLegend = () => (
+    <div className="mb-4 text-sm text-gray-600">
+      <span className="mr-4">Translation sources:</span>
+      <span className="bg-green-100 text-green-800 rounded-full px-1 py-0.5 text-xs font-medium mr-1">DB</span>
+      <span className="mr-4">Database match</span>
+      <span className="bg-blue-100 text-blue-800 rounded-full px-1 py-0.5 text-xs font-medium mr-1">AI</span>
+      <span>AI translation</span>
+    </div>
+  );
 
   if (!data) {
     return (
@@ -216,6 +386,9 @@ const CISResult = ({ cis }) => {
       </div>
     );
   }
+
+  // Check if we have any other vaccines to display
+  const hasOtherVaccines = otherData && otherData.length > 0;
 
   return (
     <div className="max-w-6xl mx-auto p-6">
@@ -239,10 +412,22 @@ const CISResult = ({ cis }) => {
         </div>
       </div>
 
+      {/* Display country of origin if available */}
+      {data.country_of_origin && data.country_of_origin !== "Other" && (
+        <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+          <p className="text-blue-700">
+            <span className="font-medium">Country of Origin:</span> {data.country_of_origin}
+          </p>
+        </div>
+      )}
+
+      {/* Add simplified legend for translation sources */}
+      {renderLegend()}
+
       <div className="space-y-6">
         {renderTable(childColumns, childData, "Child Information")}
         {renderTable(requiredColumns, requiredData, "Required Vaccinations for Child Care or Preschool Entry")}
-        {renderTable(recommendedColumns, recommendedData, "Recommended Vaccinations")}
+        {hasOtherVaccines && renderTable(otherColumns, otherData, "Other Vaccinations")}
       </div>
     </div>
   );

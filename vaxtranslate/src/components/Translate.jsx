@@ -18,9 +18,9 @@ import {
   Sparkles
 } from "lucide-react";
 
-
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import CountrySelector from "./CountrySelector"; // Import the new component
 
 const FileUploadBox = ({ dragActive, onDragEvents, fileInputRef, handleFileChange }) => (
   <div
@@ -101,7 +101,6 @@ const ProcessingStep = ({ title, description, status, icon: Icon }) => {
   );
 };
 
-
 const FilePreview = ({ file, onDelete, index }) => (
   <div className="group flex items-center p-4 bg-white/80 backdrop-blur-sm rounded-xl border border-gray-200 hover:border-blue-200 hover:shadow-md transition-all duration-200">
     <div className="w-12 h-12 rounded-lg bg-blue-50 flex items-center justify-center mr-4 group-hover:scale-105 transition-transform">
@@ -158,13 +157,13 @@ const StepIndicator = ({ currentStep, totalSteps }) => (
   </div>
 );
 
-
 const Translate = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  const [selectedCountry, setSelectedCountry] = useState(""); // Add new state for country
   const [processingStatus, setProcessingStatus] = useState({
     upload: 'pending',
     scan: 'pending',
@@ -207,27 +206,41 @@ const Translate = () => {
   }, []);
 
   const handleFileUpload = async () => {
-    if (selectedFiles.length === 0) return;
+    if (selectedFiles.length === 0) {
+      console.log("No files selected for upload.");
+      return;
+    }
+    if (!selectedCountry) {
+      console.log("Country not selected. Prompting user to select a country.");
+      alert("Please select the country of origin for the vaccination record");
+      return;
+    }
 
+    console.log("Starting file upload process...");
     setLoading(true);
     updateProcessingStatus('upload', 'processing');
 
     const formData = new FormData();
     formData.append("file", selectedFiles[0]);
+    formData.append("country", selectedCountry); // Add country to form data
 
     try {
-      // Simulate upload progress
+      console.log("Uploading file...");
       updateProcessingStatus('upload', 'processing');
       await new Promise(resolve => setTimeout(resolve, 1000));
+      console.log("File upload complete.");
       updateProcessingStatus('upload', 'complete');
 
+      console.log("Starting scan process...");
       updateProcessingStatus('scan', 'processing');
       await new Promise(resolve => setTimeout(resolve, 1500));
+      console.log("Scan process complete.");
       updateProcessingStatus('scan', 'complete');
 
+      console.log("Starting processing step...");
       updateProcessingStatus('process', 'processing');
       const response = await axios.post(
-        "https://vaxtranslatehost.ddns.net/upload",
+        "http://127.0.0.1:5000/upload",
         formData,
         {
           responseType: "json",
@@ -235,10 +248,12 @@ const Translate = () => {
         }
       );
 
+      console.log("Processing complete. Navigating to result page...");
       updateProcessingStatus('process', 'complete');
       setTimeout(() => {
         setLoading(false);
-        navigate('/result', { state: { cis: response.data } });
+        console.log("Navigating to /result with response data:", response.data);
+        navigate('/result', { state: { cis: response.data, country: selectedCountry } });
       }, 500);
     } catch (error) {
       console.error("Upload failed:", error);
@@ -343,7 +358,7 @@ const Translate = () => {
           </div>
         </div>
       </div>
-
+      
       <div className="max-w-4xl mx-auto px-4">
         <div className="bg-gradient-to-br from-gray-50 to-white shadow-2xl rounded-3xl p-8 border border-gray-100 mb-4">
           <div className="text-center mb-8">
@@ -386,6 +401,20 @@ const Translate = () => {
                     onDelete={handleFileDelete}
                   />
                 ))}
+              </div>
+              
+              {/* Add the Country Selector component here */}
+              <div className="mt-6 p-4 bg-gray-50 rounded-xl">
+                <CountrySelector 
+                  selectedCountry={selectedCountry} 
+                  setSelectedCountry={setSelectedCountry} 
+                />
+                {!selectedCountry && selectedFiles.length > 0 && (
+                  <p className="mt-2 text-sm text-amber-600 flex items-center">
+                    <AlertCircle className="w-4 h-4 mr-1" />
+                    Please select the country of origin for your vaccination record
+                  </p>
+                )}
               </div>
             </div>
           )}
@@ -458,8 +487,7 @@ const Translate = () => {
               </div>
             </div>
           )}
-
-      </div>
+        </div>
 
         <div className="mb-16">
           <div className="text-center mb-12">
@@ -531,14 +559,3 @@ const Translate = () => {
 };
 
 export default Translate;
-
-
-
-
-
-
-
-
-
-
-

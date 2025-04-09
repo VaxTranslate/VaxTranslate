@@ -1,6 +1,9 @@
 import openai
 import os
 import editdistance
+import json
+import difflib
+import re
 from PIL import Image, ImageDraw, ImageFont
 from google.cloud import vision
 from google.cloud import translate_v2 as translate
@@ -11,6 +14,138 @@ load_dotenv()
 
 # Get the API keys from the environment variables
 openai_api_key = os.getenv('OPENAI_API_KEY')
+
+# Load vaccine translations JSON data
+def load_vaccine_translations():
+    # The JSON data can be loaded from a file or hardcoded
+    vaccine_data = {
+  "countries": [
+    {
+      "country": "Angola",
+      "language": "Angolan Portuguese",
+      "vaccines": [
+        {"local": "DTwp-Hib-HepB (Vacina conjugada 5 em 1)", "english": "DTaP/Tdap", "equivalency": "not equal"},
+        {"local": "MR", "english": "MMR", "equivalency": "not equal"},
+        {"local": "IPV", "english": "IPV or OPV", "equivalency": "equal"},
+        {"local": "OPV", "english": "IPV or OPV", "equivalency": "equal"},
+        {"local": "PCV13", "english": "PCV13", "equivalency": "not equal"},
+        {"local": "Hepatitis B", "english": "Hep B", "equivalency": "equal"},
+        {"local": "DTwp-Hib-HepB (Vacina conjugada 5 em 1)", "english": "Hep B", "equivalency": "equal"},
+        {"local": "DTwp-Hib-HepB (5 in 1 conjugate vaccine)", "english": "Haemophilus influenzae type B", "equivalency": "equal"},
+        {"local": "Varicella", "english": "Varicella (VAR)", "equivalency": "not equal"}
+      ]
+    },
+    {
+      "country": "Colombia",
+      "language": "Spanish",
+      "vaccines": [
+        {"local": "DTwp+Hib+HepB (Pentavalente)", "english": "DTap/Tdap", "equivalency": "equal"},
+        {"local": "DT", "english": "DTap/Tdap", "equivalency": "equal"},
+        {"local": "DTwp", "english": "DTap/Tdap", "equivalency": "equal"},
+        {"local": "Triple Viral SRP (MMR)", "english": "MMR", "equivalency": "equal"},
+        {"local": "IPV", "english": "IPV or OPV", "equivalency": "equal"},
+        {"local": "Sabin (OPV)", "english": "IPV or OPV", "equivalency": "equal"},
+        {"local": "PCV10", "english": "PCV13", "equivalency": "equal"},
+        {"local": "Antihepatitis B pediátrico", "english": "Hep B", "equivalency": "equal"},
+        {"local": "DTwp-Hib-HepB (Pentavalente)", "english": "Hep B", "equivalency": "equal"},
+        {"local": "DTwp+Hib+HepB (Pentavalente)", "english": "Haemophilus influenzae type B", "equivalency": "equal"},
+        {"local": "Varicella (VAR)", "english": "Varicella (VAR)", "equivalency": "equal"}
+      ]
+    },
+    {
+      "country": "Democratic Republic of Congo",
+      "language": "French",
+      "vaccines": [
+        {"local": "DTwp-Hib-HepB", "english": "DTaP/Tdap", "equivalency": "not equal"},
+        {"local": "MR", "english": "MMR", "equivalency": "not equal"},
+        {"local": "IPV", "english": "IPV or OPV", "equivalency": "equal"},
+        {"local": "OPV", "english": "IPV or OPV", "equivalency": "equal"},
+        {"local": "PCV13", "english": "PCV13", "equivalency": "not equal"},
+        {"local": "DTwp-Hib-HepB", "english": "Hep B", "equivalency": "equal"},
+        {"local": "DTwp-Hib-HepB", "english": "Haemophilus influenzae", "equivalency": "equal"},
+        {"local": "Varicella", "english": "Varicella VAR", "equivalency": "not equal"}
+      ]
+    },
+    {
+      "country": "Guatemala",
+      "language": "Spanish",
+      "vaccines": [
+        {"local": "DTwp+Hib+HepB (Pentavalente)", "english": "DTaP/Tdap", "equivalency": "not equal"},
+        {"local": "DTwp", "english": "DTaP/Tdap", "equivalency": "not equal"},
+        {"local": "Td", "english": "DTaP/Tdap", "equivalency": "not equal"},
+        {"local": "Triple Viral SRP (MMR)", "english": "MMR", "equivalency": "equal"},
+        {"local": "IPV", "english": "IPV or OPV", "equivalency": "equal"},
+        {"local": "Sabin (OPV)", "english": "IPV or OPV", "equivalency": "equal"},
+        {"local": "PCV13", "english": "PCV13", "equivalency": "not equal"},
+        {"local": "Antihepatitis B Pediatric Hepatitis B Vaccine", "english": "Hep B", "equivalency": "equal"},
+        {"local": "DTwp+Hib+HepB (Pentavalente)", "english": "Hep B", "equivalency": "equal"},
+        {"local": "DTwp+Hib+HepB (5 in 1 conjugate vaccine)", "english": "Haemophilus influenzae type B", "equivalency": "equal"},
+        {"local": "Varicella", "english": "Varicella VAR", "equivalency": "not equal"}
+      ]
+    },
+    {
+      "country": "Mexico",
+      "language": "Spanish",
+      "vaccines": [
+        {"local": "DTwp+Hib+HepB (Pentavalente)", "english": "DTaP/Tdap", "equivalency": "not equal"},
+        {"local": "Td (toxoide tetánico y difteria para niños mayores y adultos)", "english": "DTaP/Tdap", "equivalency": "not equal"},
+        {"local": "Triple Viral SRP (MMR)", "english": "MMR", "equivalency": "equal"},
+        {"local": "Sabin OPV", "english": "IPV or OPV", "equivalency": "equal"},
+        {"local": "PCV13", "english": "PCV13", "equivalency": "not equal"},
+        {"local": "Antihepatitis B pediátrico", "english": "Hep B", "equivalency": "equal"},
+        {"local": "DTwp+Hib+HepB (Pentavalente)", "english": "Hep B", "equivalency": "equal"},
+        {"local": "DTwp+Hib+HepB (Pentavalente)", "english": "Haemophilus influenzae type B", "equivalency": "equal"},
+        {"local": "Varicela", "english": "Varicella VAR", "equivalency": "not equal"}
+      ]
+    },
+    {
+      "country": "Venezuela",
+      "language": "Spanish",
+      "vaccines": [
+        {"local": "DTwp+Hib+HepB (Pentavalente)", "english": "DTaP/Tdap", "equivalency": "not equal"},
+        {"local": "Td (toxoide tetánico y difteria para niños mayores y adultos)", "english": "DTaP/Tdap", "equivalency": "not equal"},
+        {"local": "Triple Viral SRP (MMR)", "english": "MMR", "equivalency": "equal"},
+        {"local": "IPV", "english": "IPV or OPV", "equivalency": "equal"},
+        {"local": "Sabin OPV", "english": "IPV or OPV", "equivalency": "equal"},
+        {"local": "PCV13", "english": "PCV13", "equivalency": "not equal"},
+        {"local": "Antihepatitis B pediátrico", "english": "Hep B", "equivalency": "equal"},
+        {"local": "DTwp+Hib+HepB (Pentavalente)", "english": "Hep B", "equivalency": "equal"},
+        {"local": "DTwp+Hib+HepB (Pentavalente)", "english": "Haemophilus influenzae type B", "equivalency": "equal"},
+        {"local": "Varicela", "english": "Varicella VAR", "equivalency": "not equal"}
+      ]
+    }
+  ]
+}
+    return vaccine_data
+
+def get_country_vaccine_translations(country):
+    vaccine_data = load_vaccine_translations()
+    
+    # Fix Venezuela spelling if needed (Venezuala → Venezuela)
+    if country == "Venezuala":
+        country = "Venezuela"
+    
+    # Look for matching country data
+    for country_data in vaccine_data["countries"]:
+        if country_data["country"].lower() == country.lower():
+            return country_data
+    
+    # Return None if country not found
+    return None
+
+def format_vaccine_translations_for_prompt(country_data):
+    """Format the vaccine translations into a string for the OpenAI prompt"""
+    if not country_data:
+        return ""
+    
+    result = f"\nVaccine name translations for {country_data['country']} ({country_data['language']}):\n"
+    result += "| Local Name | US Equivalent | Equivalency |\n"
+    result += "|-----------|--------------|--------------|\n"
+    
+    for vaccine in country_data["vaccines"]:
+        result += f"| {vaccine['local']} | {vaccine['english']} | {vaccine['equivalency']} |\n"
+    
+    return result
 
 def detect_and_translate_texts(image_path):
     client = vision.ImageAnnotatorClient()
@@ -31,22 +166,26 @@ def detect_and_translate_texts(image_path):
         )
 
     if not texts:
-        return ""
+        return {"texts_without_newline": "", "texts_with_newline": "", "original_lines": []}
     
     # Extract the full text description
     full_text = texts[0].description
 
     translated_texts = {
         "texts_without_newline": "",
-        "texts_with_newline": ""
+        "texts_with_newline": "",
+        "original_lines": []  # Store original lines for reference
     }
     
-    # 1. Extract the translated texts, which aren't splited by \n
+    # 1. Extract the translated texts, which aren't split by \n
     translated_texts["texts_without_newline"] = translate_client.translate(full_text, target_language='en')['translatedText']
 
-    # 2. Extract the translated texts, which are splited by \n
+    # 2. Extract the translated texts, which are split by \n
     # Split the text into lines
     lines = full_text.split('\n')
+
+    # Store original lines for reference
+    translated_texts["original_lines"] = lines.copy()
 
     translated_lines = []
     for line in lines:
@@ -59,6 +198,229 @@ def detect_and_translate_texts(image_path):
     translated_texts["texts_with_newline"] = "\n".join(translated_lines)
 
     return translated_texts
+
+def match_vaccines_with_original_text(vaccine_names, original_lines, translated_lines):
+    """
+    Match vaccine names from the processed JSON with their original counterparts
+    in the source document by comparing line by line between original and translated text.
+    
+    Args:
+        vaccine_names: List of vaccine names extracted from the JSON result
+        original_lines: Original text lines before translation
+        translated_lines: Translated text lines
+    
+    Returns:
+        Dictionary mapping vaccine names to their original text
+    """
+    matches = {}
+    
+    # Common vaccine-related terms to help with matching
+    vaccine_indicators = [
+        'vaccine', 'vac', 'vacc', 'vacuna', 'vacina', 'immunization', 
+        'dta', 'dtap', 'tdap', 'mmr', 'polio', 'ipv', 'opv', 
+        'hep', 'hepatitis', 'bcg', 'pent', 'triple'
+    ]
+    
+    # Preprocess the translated lines to extract potential vaccine mentions
+    translated_vaccine_lines = []
+    for i, line in enumerate(translated_lines):
+        line_lower = line.lower()
+        if any(indicator in line_lower for indicator in vaccine_indicators):
+            translated_vaccine_lines.append((i, line))
+    
+    # For each vaccine name, find the best matching line
+    for vaccine_name in vaccine_names:
+        vaccine_lower = vaccine_name.lower()
+        best_match = None
+        best_score = 0
+        best_index = -1
+        
+        # Try to find exact substring match first
+        for i, (line_idx, line) in enumerate(translated_vaccine_lines):
+            if vaccine_lower in line.lower():
+                similarity = 1.0  # Perfect substring match
+                if similarity > best_score:
+                    best_score = similarity
+                    best_match = line
+                    best_index = line_idx
+        
+        # If no exact match, use string similarity
+        if best_match is None:
+            for i, (line_idx, line) in enumerate(translated_vaccine_lines):
+                # Calculate similarity using difflib
+                similarity = difflib.SequenceMatcher(None, vaccine_lower, line.lower()).ratio()
+                
+                # Calculate edit distance and normalize
+                max_len = max(len(vaccine_lower), len(line.lower()))
+                if max_len > 0:
+                    ed_score = 1 - (editdistance.eval(vaccine_lower, line.lower()) / max_len)
+                else:
+                    ed_score = 0
+                
+                # Combine metrics (weighted average)
+                combined_score = (similarity * 0.7) + (ed_score * 0.3)
+                
+                if combined_score > best_score:
+                    best_score = combined_score
+                    best_match = line
+                    best_index = line_idx
+        
+        # If we found a match with reasonable confidence
+        if best_score > 0.4 and best_index >= 0:
+            # Use the corresponding original line
+            matches[vaccine_name] = original_lines[best_index]
+    
+    return matches
+
+def simple_enhance_with_ai_metadata(vaccines_dict, original_text_matches):
+    """
+    Add AI translation metadata to vaccine entries when no country data is available
+    
+    Args:
+        vaccines_dict: Dictionary of vaccine data to enhance
+        original_text_matches: Dictionary mapping vaccine names to original text
+    """
+    for vaccine_name, vaccine_data in list(vaccines_dict.items()):
+        # Get original text match if available
+        original_text = original_text_matches.get(vaccine_name, "")
+        
+        if isinstance(vaccine_data, dict):
+            # Add metadata to the existing dictionary
+            vaccine_data["__translationMeta"] = {
+                "source": "ai",
+                "original": original_text
+            }
+        else:
+            # Convert string value to a dictionary with metadata
+            vaccines_dict[vaccine_name] = {
+                "date": vaccine_data,
+                "__translationMeta": {
+                    "source": "ai",
+                    "original": original_text
+                }
+            }
+
+def enhance_vaccines_with_translation_metadata(vaccines_dict, country_data, original_text_matches=None):
+    """
+    Add translation metadata to each vaccine entry based on matches from the country data
+    and original text matches.
+    
+    Args:
+        vaccines_dict: Dictionary of vaccine data to enhance
+        country_data: Dictionary containing country-specific vaccine translations
+        original_text_matches: Dictionary mapping vaccine names to original text
+    """
+    if not country_data or "vaccines" not in country_data:
+        simple_enhance_with_ai_metadata(vaccines_dict, original_text_matches or {})
+        return
+    
+    # Create a mapping of local vaccine names to their English equivalents
+    local_to_english = {}
+    english_to_local = {}
+    
+    for vaccine in country_data["vaccines"]:
+        local_name = vaccine["local"].lower()
+        english_name = vaccine["english"].lower()
+        
+        local_to_english[local_name] = vaccine
+        
+        # Also create a reverse mapping from English to local names
+        if english_name not in english_to_local:
+            english_to_local[english_name] = []
+        english_to_local[english_name].append(vaccine)
+    
+    # Function to check if a vaccine name matches any in our dataset
+    def find_matching_vaccine(vaccine_name, original_name=None):
+        """
+        Find a matching vaccine in our country-specific data
+        
+        Args:
+            vaccine_name: The English vaccine name to match
+            original_name: The original untranslated name (if available)
+            
+        Returns:
+            Matched vaccine data or None
+        """
+        # Try direct match with original name first if available
+        if original_name:
+            original_lower = original_name.lower()
+            if original_lower in local_to_english:
+                return local_to_english[original_lower]
+            
+            # Try partial match with original name
+            for local_name, data in local_to_english.items():
+                # Check if local name is a substring of original or vice versa
+                if local_name in original_lower or original_lower in local_name:
+                    # Calculate similarity to ensure it's a good match
+                    similarity = difflib.SequenceMatcher(None, local_name, original_lower).ratio()
+                    if similarity > 0.7:  # Threshold for partial match
+                        return data
+        
+        # Try matching the English name
+        vaccine_lower = vaccine_name.lower()
+        
+        # Direct match with translated name
+        if vaccine_lower in english_to_local:
+            return english_to_local[vaccine_lower][0]  # Return the first match
+        
+        # Check for partial English name matches
+        for english_name, data_list in english_to_local.items():
+            # Check if English name is a substring of vaccine or vice versa
+            if english_name in vaccine_lower or vaccine_lower in english_name:
+                # Calculate similarity to ensure it's a good match
+                similarity = difflib.SequenceMatcher(None, english_name, vaccine_lower).ratio()
+                if similarity > 0.7:  # Threshold for partial match
+                    return data_list[0]  # Return the first match
+        
+        # No match found
+        return None
+    
+    # Process each vaccine in the dictionary
+    for vaccine_name, vaccine_data in list(vaccines_dict.items()):
+        # Get original text match if available
+        original_text = original_text_matches.get(vaccine_name, "") if original_text_matches else ""
+        
+        # Try to find a matching vaccine
+        matched_vaccine = find_matching_vaccine(vaccine_name, original_text)
+        
+        if matched_vaccine:
+            # This is a match from our dataset
+            if isinstance(vaccine_data, dict):
+                # Add metadata to the existing dictionary
+                vaccine_data["__translationMeta"] = {
+                    "source": "dataset",
+                    "original": original_text or matched_vaccine["local"],
+                    "english": matched_vaccine["english"],
+                    "equivalency": matched_vaccine["equivalency"]
+                }
+            else:
+                # Convert string value to a dictionary with metadata
+                vaccines_dict[vaccine_name] = {
+                    "date": vaccine_data,
+                    "__translationMeta": {
+                        "source": "dataset",
+                        "original": original_text or matched_vaccine["local"],
+                        "english": matched_vaccine["english"],
+                        "equivalency": matched_vaccine["equivalency"]
+                    }
+                }
+        else:
+            # This is an AI-translated vaccine name
+            if isinstance(vaccine_data, dict):
+                # Add metadata to the existing dictionary
+                vaccine_data["__translationMeta"] = {
+                    "source": "ai",
+                    "original": original_text
+                }
+            else:
+                # Convert string value to a dictionary with metadata
+                vaccines_dict[vaccine_name] = {
+                    "date": vaccine_data,
+                    "__translationMeta": {
+                        "source": "ai",
+                        "original": original_text
+                    }
+                }
 
 def cluster_personal_info_and_vaccination_info(translated_texts):
     
@@ -138,7 +500,9 @@ def cluster_personal_info_and_vaccination_info(translated_texts):
     
     # Command propmt for OpenAI API
     prompt = f"Extract and organize the vaccination details from the following text, then cluster the information and format it under the header 'vaccination details':\n\n{vaccination_info_texts}"
-
+    # Print the final prompt being sent to OpenAI
+    print("Final prompt being sent to OpenAI:")
+    print(prompt)
     # Response from OpenAI API
     response = openai.chat.completions.create(
         model="gpt-3.5-turbo-0125",
@@ -215,8 +579,17 @@ def calculate_cer_and_wer(ocr_result, ground_truth):
 
     return cer, wer, matched_words
 
-def cis(translated_texts):
+def cis(translated_texts, country=None):
     openai.api_key = openai_api_key
+    
+    # Get country-specific vaccine translations if available
+    country_data = None
+    vaccine_translations_text = ""
+    
+    if country and country != "Other":
+        country_data = get_country_vaccine_translations(country)
+        if country_data:
+            vaccine_translations_text = format_vaccine_translations_for_prompt(country_data)
     
     prompt = f"""
     Extract the relevant data from the provided immunization record and format it into the following consistent JSON structure. Each field should always appear, even if the values are empty or marked as "N/A." Use this example JSON as a template:
@@ -299,12 +672,12 @@ def cis(translated_texts):
         ]
       }}
     }}
-
+    {vaccine_translations_text}
     Extract and format the data from the following text:
 
     {translated_texts}
     """
-
+    print("FINAL PROMPT", prompt)
     # Call OpenAI API to extract vaccination information
     response = openai.chat.completions.create(
         model="gpt-3.5-turbo-0125",
@@ -320,26 +693,93 @@ def cis(translated_texts):
     return organized_json
 
 # main function
-def text_clustering(path):
-    translated_texts = detect_and_translate_texts(path)["texts_with_newline"]
-    # cluster_texts = cluster_personal_info_and_vaccination_info(translated_texts["texts_with_newline"])
-
-    # # Ground truth (reference) text
-    # ground_truth = "Diphtheria tetanus pertussis Measles mumps rubella"
-
-    # # OCR result from your provided data
-    # ocr_result = translated_texts["texts_without_newline"]
-
-    # # Calculate CER, WER, and get matched words
-    # cer, wer, matched_words = calculate_cer_and_wer(ocr_result, ground_truth)
-
-    # print(f"CER: {cer:.4f}")
-    # print(f"WER: {wer:.4f}")
-    # print(f"Matched words: {', '.join(matched_words)}")
-    # print("\n")
-
-    # print(translated_texts)
-    formatted_texts = cis(translated_texts).choices[0].message.content
-    # print("formatted texts", formatted_texts)
-    return formatted_texts
-    # draw_texts_on_image(path,formatted_texts, "result.png")
+def text_clustering(path, country=None):
+    """
+    Main function to process an image of a vaccination record, extract text,
+    translate it, and format it according to the CIS standard.
+    
+    Args:
+        path: Path to the image file
+        country: Country of origin for the vaccination record (optional)
+        
+    Returns:
+        Formatted JSON with vaccination data and translation metadata
+    """
+    # Get translated text and original lines
+    translated_result = detect_and_translate_texts(path)
+    translated_texts = translated_result["texts_with_newline"]
+    original_lines = translated_result["original_lines"]
+    
+    # Split the translated text into lines for matching
+    translated_lines = translated_texts.split('\n')
+    
+    # Pass the country parameter to the cis function
+    response = cis(translated_texts, country)
+    
+    # Parse the JSON content from the OpenAI response
+    try:
+        import json
+        formatted_json = json.loads(response.choices[0].message.content)
+        
+        # Ensure the required structure exists to prevent errors in the frontend
+        if "child" not in formatted_json:
+            formatted_json["child"] = {
+                "first_name": "",
+                "middle_initial": "",
+                "last_name": "",
+                "birthdate": ""
+            }
+        
+        if "required_vaccines" not in formatted_json:
+            formatted_json["required_vaccines"] = {}
+            
+        if "recommended_vaccines" not in formatted_json:
+            formatted_json["recommended_vaccines"] = {}
+        
+        # Add country information
+        formatted_json["country_of_origin"] = country or "Other"
+        
+        # Extract all vaccine names
+        all_vaccines = list(formatted_json["required_vaccines"].keys()) + list(formatted_json["recommended_vaccines"].keys())
+        
+        # Match vaccines with their original names
+        original_vaccine_matches = match_vaccines_with_original_text(all_vaccines, original_lines, translated_lines)
+        
+        # If country is specified and exists in our database, check vaccine names against translations
+        if country and country != "Other":
+            country_data = get_country_vaccine_translations(country)
+            if country_data:
+                # Process required vaccines
+                enhance_vaccines_with_translation_metadata(
+                    formatted_json["required_vaccines"], 
+                    country_data,
+                    original_vaccine_matches
+                )
+                
+                # Process recommended vaccines
+                enhance_vaccines_with_translation_metadata(
+                    formatted_json["recommended_vaccines"], 
+                    country_data,
+                    original_vaccine_matches
+                )
+        else:
+            # Even without country data, we can add AI translation metadata
+            simple_enhance_with_ai_metadata(formatted_json["required_vaccines"], original_vaccine_matches)
+            simple_enhance_with_ai_metadata(formatted_json["recommended_vaccines"], original_vaccine_matches)
+        
+        return formatted_json
+    except json.JSONDecodeError:
+        # If JSON parsing fails, return a properly structured object with the raw text
+        default_json = {
+            "child": {
+                "first_name": "",
+                "middle_initial": "",
+                "last_name": "",
+                "birthdate": ""
+            },
+            "required_vaccines": {},
+            "recommended_vaccines": {},
+            "raw_text": response.choices[0].message.content,
+            "country_of_origin": country or "Other"
+        }
+        return default_json

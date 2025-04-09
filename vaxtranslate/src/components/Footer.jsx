@@ -1,12 +1,12 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+// import { Link } from 'react-router-dom';
 import { 
   Facebook, 
   Twitter, 
   Instagram, 
-  Mail, 
-  Phone, 
-  MapPin, 
+  // Mail, 
+  // Phone, 
+  // MapPin, 
   Globe, 
   Shield, 
   Heart 
@@ -23,7 +23,7 @@ const Footer = () => {
               Making document translation simple, fast, and accurate with the power of AI.
             </p>
             <div className="flex space-x-4 pt-2">
-              <a href="#" className="hover:text-blue-400 transition-colors">
+              {/* <a href="#" className="hover:text-blue-400 transition-colors">
                 <Facebook size={20} />
               </a>
               <a href="#" className="hover:text-blue-400 transition-colors">
@@ -31,7 +31,7 @@ const Footer = () => {
               </a>
               <a href="#" className="hover:text-blue-400 transition-colors">
                 <Instagram size={20} />
-              </a>
+              </a> */}
             </div>
           </div>
 
@@ -45,12 +45,13 @@ const Footer = () => {
                 { text: 'Contact', path: '/contact' },
               ].map((link) => (
                 <li key={link.text}>
-                  <Link 
+                  {/* <Link 
                     to={link.path}
                     className="text-gray-400 hover:text-blue-400 transition-colors"
                   >
                     {link.text}
-                  </Link>
+                  </Link> */}
+                  <span className="text-gray-400">{link.text}</span>
                 </li>
               ))}
             </ul>
@@ -100,13 +101,19 @@ const Footer = () => {
                 { text: 'Terms of Service', path: '/terms' },
                 { text: 'Cookie Policy', path: '/cookies' },
               ].map((link) => (
-                <Link
+                <span
                   key={link.text}
-                  to={link.path}
-                  className="text-sm text-gray-400 hover:text-blue-400 transition-colors"
+                  className="text-sm text-gray-400"
                 >
                   {link.text}
-                </Link>
+                </span>
+                // <Link
+                //   key={link.text}
+                //   to={link.path}
+                //   className="text-sm text-gray-400 hover:text-blue-400 transition-colors"
+                // >
+                //   {link.text}
+                // </Link>
               ))}
             </div>
           </div>
