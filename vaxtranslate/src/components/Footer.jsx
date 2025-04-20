@@ -40,8 +40,8 @@ const Footer = () => {
             <ul className="space-y-2">
               {[
                 { text: 'Home', path: '/' },
-                { text: 'About Us', path: '/about' },
-                { text: 'Services', path: '/services' },
+                {/* text: 'About Us', path: '/about' */},
+                {/* text: 'Services', path: '/services' */},
                 { text: 'Contact', path: '/contact' },
               ].map((link) => (
                 <li key={link.text}>
@@ -57,7 +57,7 @@ const Footer = () => {
             </ul>
           </div>
 
-          <div>
+         {/* <div>
             <h4 className="text-lg font-semibold text-white mb-4">Our Services</h4>
             <ul className="space-y-2">
               {[
@@ -71,7 +71,8 @@ const Footer = () => {
                 </li>
               ))}
             </ul>
-          </div>
+          </div>  
+          */}
 
           {/* <div>
             <h4 className="text-lg font-semibold text-white mb-4">Contact Us</h4>
