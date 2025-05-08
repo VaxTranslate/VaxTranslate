@@ -363,10 +363,10 @@ const Translate = () => {
         <div className="bg-gradient-to-br from-gray-50 to-white shadow-2xl rounded-3xl p-8 border border-gray-100 mb-4">
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold text-gray-800 mb-2">
-              Start Your Translation
+              Translate
             </h2>
             <p className="text-gray-600">
-              Upload your document and let our AI handle the rest
+              Upload your document, and we’ll handle the rest
             </p>
           </div>
 
@@ -491,7 +491,7 @@ const Translate = () => {
 
         <div className="mb-16">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-800 mb-4">Why Choose Us for Vaccination Record Translations</h2>
+            <h2 className="text-3xl font-bold text-gray-800 mb-4">Why Choose Us?</h2>
             <p className="text-gray-600 max-w-2xl mx-auto">
             Access fast, reliable, and AI-driven translation for all your vaccination-related documents.
             </p>
