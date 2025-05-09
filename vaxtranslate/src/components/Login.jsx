@@ -1,8 +1,21 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Mail, Lock, User as UserIcon } from "lucide-react";
+import { useLocation } from "react-router-dom";
 
 const LoginPage = () => {
   const [isLogin, setIsLogin] = useState(true);
+  const location = useLocation();
+  
+
+// Determine if the current route is for login or sign-up
+  useEffect(() => {
+    if (location.pathname === "/signup") {
+      setIsLogin(false); // Switch to Sign-Up mode
+    } else {
+      setIsLogin(true); // Switch to Login mode
+    }
+  }, [location.pathname]);
+
 
   const InputField = ({ icon: Icon, type, placeholder }) => (
     <div className="relative">
