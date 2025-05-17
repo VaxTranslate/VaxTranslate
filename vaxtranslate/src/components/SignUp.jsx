@@ -1,12 +1,14 @@
 import React, { useState } from "react";
 import { Mail, Lock, User as UserIcon } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { auth } from "../firebase";
 import { registerUsers } from "../firebaseAuth";
 
 
 function Register() {
   // Original form data state
+    const navigate = useNavigate(); // add this line
+
     const [fullName, setFullName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -25,6 +27,7 @@ function Register() {
         try{
         const user = await registerUsers(email, password,fullName);
             alert(`Register Successful: Welcome ${fullName}`);
+            navigate("/login"); // navigate to login page after successful sign up
             return user;
         }catch (err){
             setError(err.message);

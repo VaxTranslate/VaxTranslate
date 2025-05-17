@@ -4,7 +4,8 @@ import { Link,useNavigate } from "react-router-dom";
 import { auth, db } from "../firebase";
 import {doc, getDoc} from "firebase/firestore";
 import { loginUser } from "../firebaseAuth";
-
+import { FcGoogle } from "react-icons/fc";
+import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 
 function Login(){
     const [email, setEmail] = useState("");
@@ -35,6 +36,18 @@ function Login(){
             }
         }
     };
+
+    const handleGoogleLogin = async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+      await signInWithPopup(auth, provider);
+      alert("Logged in with Google!");
+      navigate("/");
+    } catch (error) {
+      setError(error.message);
+    }
+  };
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-white to-blue-50">
@@ -81,6 +94,18 @@ function Login(){
             >
               Sign in
             </button>
+             
+             {/* add button login  with google button */}
+            <button
+              type="button"
+              className="group relative w-full flex justify-center gap-2 px-4 py-2 border border-gray-300 rounded-md bg-white text-sm font-medium shadow hover:shadow-md transition"
+              onClick={handleGoogleLogin}
+            >
+            <FcGoogle className="w-5 h-5" />
+              Login with Google
+            </button> 
+             
+
             <div className="text-sm text-center mt-2">
               <a
                 href="#"
