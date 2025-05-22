@@ -16,7 +16,7 @@ const Navbar = () => {
             </Link>
           </div>
           <div className="flex items-center">
-            <div className="hidden md:flex space-x-8">
+            <div className="md:flex space-x-8">
               {/*
               {[
                 { to: "/translate", Icon: Upload, text: "Translate" },
@@ -48,12 +48,12 @@ const Navbar = () => {
               Sign Up
             </Link>
 
-              <Link
+             {/* <Link
                 to="/login"
                 className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all"
               >
                 <User className="w-5 h-5" />
-              </Link>
+              </Link>  */}
             </div>
           </div>
         </div>
