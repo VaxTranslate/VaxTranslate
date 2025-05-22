@@ -12,7 +12,7 @@ function Login(){
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
     const navigate = useNavigate();
-
+    
     const handleLogin = async(e) =>{
         e.preventDefault();
         setError("");
@@ -22,11 +22,16 @@ function Login(){
             const userDocRef = doc(db, "users", user.uid);
             const userDoc = await getDoc(userDocRef);
             if(userDoc.exists()){
-                const username = userDoc.data().name;
-                alert(`Login Successful: Welcome back ${username}`);
+              const username = userDoc.data().name;
+              alert(`Login Successful: Welcome back ${username}`);
 
-                // redirect to home page
-                navigate('/'); 
+              // Set login state in localStorage and notify other components
+              localStorage.setItem("loggedIn", "true");
+              window.dispatchEvent(new Event("loginStateChanged"));
+
+              // redirect to dashboard
+              navigate("/");
+                
             }            
         }catch (err){
             if (err.code === "auth/invalid-credential") {
@@ -42,7 +47,13 @@ function Login(){
     try {
       await signInWithPopup(auth, provider);
       alert("Logged in with Google!");
+
+      // Set login state in localStorage and notify other components
+      localStorage.setItem("loggedIn", "true");
+      window.dispatchEvent(new Event("loginStateChanged"));
+
       navigate("/");
+      
     } catch (error) {
       setError(error.message);
     }
