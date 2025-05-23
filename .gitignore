@@ -27,3 +27,8 @@ yarn-error.log*
 server/vaxtranslate-423905-15fcc3121322.json
 node_modules
 .env
+
+server/uploads/
+server/processed/
+server/result.png
+server/converted_record.png
