@@ -3,7 +3,8 @@ import Translate from "./components/Translate";
 import Dashboard from "./components/Dashboard";
 import Home from "./components/Home";
 import Navbar from "./components/Navbar";
-import LoginPage from "./components/Login";
+import Login from "./components/Login";
+import SignUp from "./components/SignUp";
 import Result from "./components/Result";
 import Footer from "./components/Footer";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
@@ -16,8 +17,10 @@ function App() {
         <Navbar />
         <main className="flex-grow flex flex-col">
           <Routes>
-            <Route path="/login" element={<LoginPage />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<SignUp />} />
             <Route path="/result" element={<Result />} />
+            <Route path="/dashboard" element={<Dashboard />} /> 
             <Route path="/" element={<Translate />} />
           </Routes>
         </main>
