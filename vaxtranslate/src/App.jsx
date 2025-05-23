@@ -10,6 +10,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import "./App.css";
 
 function App() {
+
   return (
     <Router>
       <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 via-white to-blue-50">
