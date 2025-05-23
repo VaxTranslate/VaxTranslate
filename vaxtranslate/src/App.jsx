@@ -1,7 +1,6 @@
 import React from "react";
 import Translate from "./components/Translate";
 import Dashboard from "./components/Dashboard";
-import Home from "./components/Home";
 import Navbar from "./components/Navbar";
 import Login from "./components/Login";
 import SignUp from "./components/SignUp";

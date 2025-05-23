@@ -1,12 +1,12 @@
 import React, { useRef, useState, useCallback } from "react";
 import { 
-  Upload as UploadIcon, 
+  Upload, 
   X, 
   FileText, 
   AlertCircle,
   CheckCircle2,
   Loader2,
-  ShieldCheck,
+  Shield,
   Zap,
   Brain,
   BadgeCheck,
@@ -21,8 +21,181 @@ import {
 
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import CountrySelector from "./CountrySelector"; // Import the new component
+import CountrySelector from "./CountrySelector";
 
+// Consolidated data constants
+const FEATURES = [
+  { icon: Zap, text: "Instant Processing", description: "Get your translations in minutes, not days", color: "bg-yellow-50 text-yellow-600" },
+  { icon: Shield, text: "100% Secure", description: "Your documents are encrypted and protected", color: "bg-green-50 text-green-600" },
+  { icon: Brain, text: "AI-Powered", description: "Advanced AI ensures precise translations", color: "bg-blue-50 text-blue-600" },
+  { icon: BadgeCheck, text: "High Accuracy", description: "Support for all major document formats", color: "bg-purple-50 text-purple-600" }
+];
+
+const PROCESS_STEPS = [
+  { 
+    title: "Upload", 
+    icon: FileUp, 
+    description: "Upload your document securely to our platform",
+    color: "from-blue-500 to-blue-600",
+    statusKey: 'upload'
+  },
+  { 
+    title: "Scan", 
+    icon: Scan, 
+    description: "Advanced OCR scans every detail",
+    color: "from-blue-600 to-blue-700",
+    statusKey: 'scan'
+  },
+  { 
+    title: "Process", 
+    icon: Brain, 
+    description: "AI analyzes and translates content",
+    color: "from-blue-700 to-blue-800",
+    statusKey: 'process'
+  },
+  { 
+    title: "Visualize", 
+    icon: Eye, 
+    description: "View structured data and visual overlay",
+    color: "from-blue-800 to-blue-900",
+    statusKey: 'translate'
+  }
+];
+
+const FileUploadBox = ({ dragActive, onDragEvents, fileInputRef, handleFileChange }) => (
+  <div
+    onDragEnter={onDragEvents}
+    onDragLeave={onDragEvents}
+    onDragOver={onDragEvents}
+    onDrop={onDragEvents}
+    onClick={() => fileInputRef.current.click()}
+    className={`
+      relative border-2 border-dashed rounded-xl p-12 text-center 
+      cursor-pointer transition-all duration-300 ease-in-out
+      ${dragActive
+        ? "border-blue-500 bg-blue-50/50 scale-[1.02]"
+        : "border-blue-200 hover:border-blue-400 hover:bg-blue-50/30 hover:scale-[1.01]"
+      }
+    `}
+  >
+    <input
+      type="file"
+      ref={fileInputRef}
+      className="hidden"
+      accept=".png, .pdf, .jpg, .jpeg, .svg, .bmp, .tiff, .tga"
+      onChange={handleFileChange}
+      multiple
+    />
+    <div className="flex flex-col items-center">
+      <div className="w-20 h-20 mb-4 rounded-full bg-blue-50 flex items-center justify-center group-hover:scale-110 transition-transform">
+        <Upload className={`w-10 h-10 transition-colors duration-300 ${
+          dragActive ? "text-blue-600" : "text-blue-500"
+        }`} />
+      </div>
+      <h5 className="text-xl font-semibold mb-2 text-gray-800">
+        {dragActive ? "Drop your files here" : "Drag & drop files here"}
+      </h5>
+      <p className="text-sm text-gray-500 mb-2">
+        or click to browse from your computer
+      </p>
+      <p className="text-xs text-gray-400 max-w-sm">
+        Supported formats: JPEG, PNG, PDF, SVG, BMP, TIFF, TGA
+      </p>
+    </div>
+  </div>
+);
+
+const ProcessingStep = ({ title, description, status, icon: Icon }) => {
+  const getStatusIcon = () => {
+    switch (status) {
+      case 'complete':
+        return <CheckCircle2 className="w-6 h-6 text-green-500" />;
+      case 'processing':
+        return <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />;
+      case 'pending':
+        return <div className="w-6 h-6 rounded-full border-2 border-gray-200" />;
+      case 'error':
+        return <AlertCircle className="w-6 h-6 text-red-500" />;
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-center justify-center bg-white/50 backdrop-blur-sm p-6 rounded-xl hover:shadow-md transition-all duration-200">
+      <div className="mb-3 relative">
+        <div className="absolute -right-2 -top-2">
+          {getStatusIcon()}
+        </div>
+        <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center">
+          <Icon className="w-6 h-6 text-blue-500" />
+        </div>
+      </div>
+      <h6 className="font-semibold text-gray-900 text-lg mb-2">
+        {title}
+      </h6>
+      <p className="text-sm text-gray-500 text-center">
+        {description}
+      </p>
+    </div>
+  );
+};
+
+const FilePreview = ({ file, onDelete, index }) => (
+  <div className="group flex items-center p-4 bg-white/80 backdrop-blur-sm rounded-xl border border-gray-200 hover:border-blue-200 hover:shadow-md transition-all duration-200">
+    <div className="w-12 h-12 rounded-lg bg-blue-50 flex items-center justify-center mr-4 group-hover:scale-105 transition-transform">
+      <FileText className="w-6 h-6 text-blue-500" />
+    </div>
+    <div className="flex-1 min-w-0">
+      <p className="font-medium text-gray-900 truncate">{file.name}</p>
+      <div className="flex items-center text-sm text-gray-500 space-x-2">
+        <span>{(file.size / 1024 / 1024).toFixed(2)} MB</span>
+        <span>•</span>
+        <span>{file.type || 'Unknown type'}</span>
+      </div>
+    </div>
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        onDelete(index);
+      }}
+      className="p-2 hover:bg-gray-100 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+    >
+      <X className="w-5 h-5 text-gray-400 hover:text-gray-600" />
+    </button>
+  </div>
+);
+
+const ActionButton = ({ children, onClick, variant = 'default', disabled = false }) => {
+  const baseStyles = "px-4 py-3 rounded-xl font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed";
+  const variants = {
+    default: "bg-white border border-gray-200 text-gray-700 hover:border-blue-500 hover:text-blue-500 hover:shadow-md disabled:hover:border-gray-200 disabled:hover:text-gray-700 disabled:hover:shadow-none",
+    primary: "bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-500 hover:to-blue-300 text-white shadow-lg shadow-blue-500/30 disabled:hover:from-blue-600 disabled:hover:to-blue-400"
+  };
+
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`${baseStyles} ${variants[variant]}`}
+    >
+      {children}
+    </button>
+  );
+};
+
+const StepIndicator = ({ currentStep, totalSteps }) => (
+  <div className="flex items-center justify-center space-x-2 mb-6">
+    {Array.from({ length: totalSteps }).map((_, index) => (
+      <div
+        key={index}
+        className={`w-2 h-2 rounded-full transition-colors duration-200 ${
+          index <= currentStep ? 'bg-blue-500' : 'bg-gray-200'
+        }`}
+      />
+    ))}
+  </div>
+);
 
 const Translate = () => {
   const navigate = useNavigate();
@@ -30,7 +203,7 @@ const Translate = () => {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
-  const [selectedCountry, setSelectedCountry] = useState(""); // Add new state for country
+  const [selectedCountry, setSelectedCountry] = useState("");
   const [processingStatus, setProcessingStatus] = useState({
     upload: 'pending',
     scan: 'pending',
@@ -93,7 +266,6 @@ const Translate = () => {
     formData.append("file", selectedFiles[0]);
     formData.append("country", selectedCountry);
 
-    // Store the original file for later use
     const originalFile = selectedFiles[0];
 
     try {
@@ -112,7 +284,6 @@ const Translate = () => {
       console.log("Starting processing step...");
       updateProcessingStatus('process', 'processing');
       
-      // Main processing request
       const response = await axios.post(
         "https://vaxtranslate.ddns.net/upload",
         formData,
@@ -126,14 +297,13 @@ const Translate = () => {
       updateProcessingStatus('process', 'complete');
       updateProcessingStatus('translate', 'processing');
 
-      // Text detection request for overlay
       const textDetectionFormData = new FormData();
       textDetectionFormData.append("file", originalFile);
 
       let translatedImageBlob = null;
       try {
         const textDetectionResponse = await axios.post(
-          "https://vaxtranslate.ddns.net/detect-text",
+          "http://127.0.0.1:5000/detect-text",
           textDetectionFormData,
           {
             responseType: "blob",
@@ -170,6 +340,7 @@ const Translate = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50">
+      {/* Hero Section */}
       <div className="bg-gradient-to-br from-blue-600 to-blue-700 text-white py-16">
         <div className="max-w-4xl mx-auto px-4">
           <div className="text-center mb-8">
@@ -179,21 +350,17 @@ const Translate = () => {
               </div>
             </div>
             <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            Your Trusted Partner for Vaccine Record Translation
+              Your Trusted Partner for Vaccine Record Translation
             </h1>
             <p className="text-xl text-blue-100 max-w-2xl mx-auto">
-            Instantly translate vaccination records and documents with precision.
-            Powered by AI for fast, secure, and accurate results.
+              Instantly translate vaccination records and documents with precision.
+              Powered by AI for fast, secure, and accurate results.
             </p>
           </div>
           
+          {/* Feature highlights */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            {[
-              { icon: Zap, text: "Instant Processing" },
-              { icon: ShieldCheck, text: "100% Secure" },
-              { icon: Brain, text: "AI-Powered" },
-              { icon: BadgeCheck, text: "High Accuracy" },
-            ].map(({ icon: Icon, text }) => (
+            {FEATURES.map(({ icon: Icon, text }) => (
               <div key={text} className="bg-white/10 backdrop-blur-sm rounded-xl p-3 text-center">
                 <Icon className="w-6 h-6 mx-auto mb-2" />
                 <span className="text-sm font-medium">{text}</span>
@@ -203,6 +370,7 @@ const Translate = () => {
         </div>
       </div>
 
+      {/* How It Works Section */}
       <div className="w-full bg-white shadow-xl border-y border-gray-100 mb-16 -mt-8">
         <div className="max-w-6xl mx-auto px-4 py-12">
           <div className="flex items-center justify-center mb-12">
@@ -214,32 +382,7 @@ const Translate = () => {
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            {[
-              { 
-                title: "Upload", 
-                icon: FileUp, 
-                description: "Upload your document securely to our platform",
-                color: "from-blue-500 to-blue-600"
-              },
-              { 
-                title: "Scan", 
-                icon: Scan, 
-                description: "Advanced OCR scans every detail",
-                color: "from-blue-600 to-blue-700"
-              },
-              { 
-                title: "Process", 
-                icon: Brain, 
-                description: "AI analyzes and translates content",
-                color: "from-blue-700 to-blue-800"
-              },
-              { 
-                title: "Visualize", 
-                icon: Eye, 
-                description: "View structured data and visual overlay",
-                color: "from-blue-800 to-blue-900"
-              }
-            ].map((step, index) => (
+            {PROCESS_STEPS.map((step, index) => (
               <div key={step.title} className="relative group">
                 <div className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-gray-100">
                   <div className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${step.color} flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform`}>
@@ -265,9 +408,9 @@ const Translate = () => {
         </div>
       </div>
       
-      <div className="max-w-4xl mx-auto px-4">
-
-        <div className="bg-gradient-to-br from-gray-50 to-white shadow-2xl rounded-3xl p-8 border border-gray-100 mb-4">
+      {/* Main Upload Section */}
+      <div className="max-w-4xl mx-auto px-4 mb-16">
+        <div className="bg-gradient-to-br from-gray-50 to-white shadow-2xl rounded-3xl p-8 border border-gray-100">
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold text-gray-800 mb-2">
               Start Your Translation
@@ -310,7 +453,6 @@ const Translate = () => {
                 ))}
               </div>
               
-              {/* Add the Country Selector component here */}
               <div className="mt-6 p-4 bg-gray-50 rounded-xl">
                 <CountrySelector 
                   selectedCountry={selectedCountry} 
@@ -335,30 +477,15 @@ const Translate = () => {
               <div className="max-w-lg mx-auto">
                 <StepIndicator currentStep={getCurrentStep()} totalSteps={4} />
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <ProcessingStep
-                    title="Uploading"
-                    description="Preparing files"
-                    status={processingStatus.upload}
-                    icon={FileUp}
-                  />
-                  <ProcessingStep
-                    title="Scanning"
-                    description="Analyzing content"
-                    status={processingStatus.scan}
-                    icon={Scan}
-                  />
-                  <ProcessingStep
-                    title="Processing"
-                    description="Extracting data"
-                    status={processingStatus.process}
-                    icon={FileCheck}
-                  />
-                  <ProcessingStep
-                    title="Translating"
-                    description="Creating overlay"
-                    status={processingStatus.translate}
-                    icon={Eye}
-                  />
+                  {PROCESS_STEPS.map((step) => (
+                    <ProcessingStep
+                      key={step.title}
+                      title={step.title}
+                      description={step.description}
+                      status={processingStatus[step.statusKey]}
+                      icon={step.icon}
+                    />
+                  ))}
                 </div>
               </div>
             </div>
@@ -377,7 +504,7 @@ const Translate = () => {
                 </span>
               ) : (
                 <span className="flex items-center justify-center">
-                  <UploadIcon className="w-5 h-5 mr-2" />
+                  <Upload className="w-5 h-5 mr-2" />
                   Translate Document
                 </span>
               )}
@@ -400,71 +527,6 @@ const Translate = () => {
               </div>
             </div>
           )}
-        </div>
-
-        <div className="mb-16">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-800 mb-4">Why Choose Us?</h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-            Access fast, reliable, and AI-driven translation for all your vaccination-related documents.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              {
-                title: "Lightning Fast",
-                description: "Get your translations in minutes, not days",
-                icon: Zap,
-                color: "bg-yellow-50 text-yellow-600"
-              },
-              {
-                title: "Secure & Private",
-                description: "Your documents are encrypted and protected",
-                icon: ShieldCheck,
-                color: "bg-green-50 text-green-600"
-              },
-              {
-                title: "High Accuracy",
-                description: "Advanced AI ensures precise translations",
-                icon: BadgeCheck,
-                color: "bg-blue-50 text-blue-600"
-              },
-              {
-                title: "Multiple Formats",
-                description: "Support for all major document formats",
-                icon: FileText,
-                color: "bg-purple-50 text-purple-600"
-              },
-              {
-                title: "Smart Processing",
-                description: "Maintains original formatting and layout",
-                icon: Brain,
-                color: "bg-indigo-50 text-indigo-600"
-              },
-              {
-                title: "24/7 Available",
-                description: "Translate your documents anytime, anywhere",
-                icon: Sparkles,
-                color: "bg-pink-50 text-pink-600"
-              }
-            ].map(({ title, description, icon: Icon, color }) => (
-              <div 
-                key={title} 
-                className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-gray-100"
-              >
-                <div className={`w-12 h-12 rounded-xl ${color} flex items-center justify-center mb-4`}>
-                  <Icon className="w-6 h-6" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                  {title}
-                </h3>
-                <p className="text-sm text-gray-600">
-                  {description}
-                </p>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
     </div>
