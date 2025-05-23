@@ -15,7 +15,8 @@ import {
   FileUp,
   FileCheck,
   Trash2,
-  Sparkles
+  Sparkles,
+  Eye
 } from "lucide-react";
 
 import axios from "axios";
@@ -167,10 +168,12 @@ const Translate = () => {
   const [processingStatus, setProcessingStatus] = useState({
     upload: 'pending',
     scan: 'pending',
-    process: 'pending'
+    process: 'pending',
+    translate: 'pending'
   });
 
   const getCurrentStep = () => {
+    if (processingStatus.translate === 'complete') return 3;
     if (processingStatus.process === 'complete') return 2;
     if (processingStatus.scan === 'complete') return 1;
     if (processingStatus.upload === 'complete') return 0;
@@ -222,7 +225,10 @@ const Translate = () => {
 
     const formData = new FormData();
     formData.append("file", selectedFiles[0]);
-    formData.append("country", selectedCountry); // Add country to form data
+    formData.append("country", selectedCountry);
+
+    // Store the original file for later use
+    const originalFile = selectedFiles[0];
 
     try {
       console.log("Uploading file...");
@@ -239,6 +245,8 @@ const Translate = () => {
 
       console.log("Starting processing step...");
       updateProcessingStatus('process', 'processing');
+      
+      // Main processing request
       const response = await axios.post(
         "https://vaxtranslate.ddns.net/upload",
         formData,
@@ -248,16 +256,48 @@ const Translate = () => {
         }
       );
 
-      console.log("Processing complete. Navigating to result page...");
+      console.log("Processing complete. Starting translation overlay...");
       updateProcessingStatus('process', 'complete');
+      updateProcessingStatus('translate', 'processing');
+
+      // Text detection request for overlay
+      const textDetectionFormData = new FormData();
+      textDetectionFormData.append("file", originalFile);
+
+      let translatedImageBlob = null;
+      try {
+        const textDetectionResponse = await axios.post(
+          "https://vaxtranslate.ddns.net/detect-text",
+          textDetectionFormData,
+          {
+            responseType: "blob",
+            headers: { "Content-Type": "multipart/form-data" },
+          }
+        );
+        translatedImageBlob = URL.createObjectURL(textDetectionResponse.data);
+        console.log("Text detection overlay complete.");
+      } catch (textDetectionError) {
+        console.warn("Text detection failed, continuing without overlay:", textDetectionError);
+      }
+
+      updateProcessingStatus('translate', 'complete');
+
       setTimeout(() => {
         setLoading(false);
         console.log("Navigating to /result with response data:", response.data);
-        navigate('/result', { state: { cis: response.data, country: selectedCountry } });
+        navigate('/result', { 
+          state: { 
+            cis: response.data, 
+            country: selectedCountry,
+            originalFile: originalFile,
+            translatedImage: translatedImageBlob
+          } 
+        });
       }, 500);
     } catch (error) {
       console.error("Upload failed:", error);
       updateProcessingStatus('process', 'error');
+      updateProcessingStatus('translate', 'error');
       setLoading(false);
     }
   };
@@ -328,9 +368,9 @@ const Translate = () => {
                 color: "from-blue-700 to-blue-800"
               },
               { 
-                title: "Download", 
-                icon: BadgeCheck, 
-                description: "Get your perfectly translated document",
+                title: "Visualize", 
+                icon: Eye, 
+                description: "View structured data and visual overlay",
                 color: "from-blue-800 to-blue-900"
               }
             ].map((step, index) => (
@@ -426,25 +466,31 @@ const Translate = () => {
                 Processing Your Document
               </h3>
               <div className="max-w-lg mx-auto">
-                <StepIndicator currentStep={getCurrentStep()} totalSteps={3} />
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <StepIndicator currentStep={getCurrentStep()} totalSteps={4} />
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   <ProcessingStep
-                    title="Uploading Files"
-                    description="Preparing and uploading your documents"
+                    title="Uploading"
+                    description="Preparing files"
                     status={processingStatus.upload}
                     icon={FileUp}
                   />
                   <ProcessingStep
-                    title="Scanning Content"
-                    description="Analyzing document structure"
+                    title="Scanning"
+                    description="Analyzing content"
                     status={processingStatus.scan}
                     icon={Scan}
                   />
                   <ProcessingStep
                     title="Processing"
-                    description="Extracting and formatting data"
+                    description="Extracting data"
                     status={processingStatus.process}
                     icon={FileCheck}
+                  />
+                  <ProcessingStep
+                    title="Translating"
+                    description="Creating overlay"
+                    status={processingStatus.translate}
+                    icon={Eye}
                   />
                 </div>
               </div>
@@ -477,7 +523,7 @@ const Translate = () => {
             )}
           </div>
 
-          {processingStatus.process === 'error' && (
+          {(processingStatus.process === 'error' || processingStatus.translate === 'error') && (
             <div className="mt-4 p-4 bg-red-50 rounded-xl border border-red-200 shadow-sm">
               <div className="flex items-center">
                 <AlertCircle className="w-5 h-5 text-red-500 mr-2" />
