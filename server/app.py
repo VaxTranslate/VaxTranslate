@@ -8,6 +8,7 @@ import io
 import json
 from flask_cors import CORS
 from textClustering import text_clustering
+from textDetect import detect_text_and_draw
 from pdf2image import convert_from_path, convert_from_bytes  # type: ignore
 from pdf2image.exceptions import (  # type: ignore
     PDFInfoNotInstalledError,
@@ -24,25 +25,6 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "vaxtranslate-423905-15fcc3121322.json"
 
-# Load database URL from .env file
-# load_dotenv()
-# DATABASE_URL = os.getenv("DATABASE_URL")
-
-# Set up SQLAlchemy engine and session
-# engine = create_engine(DATABASE_URL)
-# db_session = scoped_session(sessionmaker(autocommit=False,
-#                                          autoflush=False,
-#                                          bind=engine))
-
-# Optional: If you have a base class for your models, bind the engine to it
-# Base = declarative_base()
-# Base.query = db_session.query_property()
-
-# @app.teardown_appcontext
-# def shutdown_session(exception=None):
-#     db_session.remove()
-
-
 @app.route("/")
 def hello_world():
     return "Hello, World!"
@@ -52,6 +34,68 @@ def hello_world():
 def get_data():
     data = {"message": "Hello, API!", "status": "success"}
     return jsonify(data)
+
+
+@app.route("/detect-text", methods=["POST"])
+def detect_text():
+    """Endpoint for text detection and translation with bounding boxes"""
+    print("\n==== RECEIVED TEXT DETECTION REQUEST ====")
+    
+    if "file" not in request.files:
+        print("ERROR: No file part in request")
+        return jsonify({"error": "No file part"}), 400
+    
+    file = request.files["file"]
+    
+    if file.filename == "":
+        print("ERROR: No selected file")
+        return jsonify({"error": "No selected file"}), 400
+    
+    print(f"File received for text detection: {file.filename}, Type: {file.content_type}")
+    
+    if file and (file.filename.endswith(".png") or file.filename.endswith(".jpg") or file.filename.endswith(".jpeg") or file.filename.endswith(".pdf")):
+        input_file_path = os.path.join(UPLOAD_FOLDER, f"detect_{file.filename}")
+        file.save(input_file_path)
+        print(f"File saved to: {input_file_path}")
+
+        try:
+            # Handle PDF conversion if needed
+            if file.filename.endswith(".pdf"):
+                print("Converting PDF to image for text detection...")
+                image = convert_from_path(input_file_path, fmt="png")
+                converted_image_path = os.path.join(UPLOAD_FOLDER, f"converted_detect_{file.filename.replace('.pdf', '.png')}")
+                image[0].save(converted_image_path, "PNG")
+                print(f"Converted PDF to image: {converted_image_path}")
+                input_file_path = converted_image_path
+            
+            # Process the image for text detection
+            print("Running text detection and translation...")
+            detect_text_and_draw(input_file_path)
+            
+            # The function saves the result as "result.png"
+            result_path = "result.png"
+            
+            if os.path.exists(result_path):
+                print(f"Text detection completed. Result saved to: {result_path}")
+                
+                # Return the processed image
+                return send_file(
+                    result_path,
+                    as_attachment=True,
+                    download_name=f"detected_{file.filename.replace('.pdf', '.png')}",
+                    mimetype='image/png'
+                )
+            else:
+                print("ERROR: Result image not found")
+                return jsonify({"error": "Text detection failed - result image not generated"}), 500
+                
+        except Exception as e:
+            print(f"ERROR during text detection: {str(e)}")
+            return jsonify({"error": f"Text detection failed: {str(e)}"}), 500
+            
+    else:
+        print(f"ERROR: Unsupported file type for text detection: {file.filename}")
+        return jsonify({"error": "File must be PNG, JPG, JPEG, or PDF"}), 400
 
 
 @app.route("/upload", methods=["POST"])
