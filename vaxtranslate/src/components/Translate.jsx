@@ -302,6 +302,7 @@ const Translate = () => {
 
       let translatedImageBlob = null;
       try {
+
         const textDetectionResponse = await axios.post(
           "https://vaxtranslate.ddns.net/detect-text",
           textDetectionFormData,
