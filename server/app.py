@@ -41,62 +41,89 @@ def detect_text():
     """Endpoint for text detection and translation with bounding boxes"""
     print("\n==== RECEIVED TEXT DETECTION REQUEST ====")
     
-    if "file" not in request.files:
-        print("ERROR: No file part in request")
-        return jsonify({"error": "No file part"}), 400
-    
-    file = request.files["file"]
-    
-    if file.filename == "":
-        print("ERROR: No selected file")
-        return jsonify({"error": "No selected file"}), 400
-    
-    print(f"File received for text detection: {file.filename}, Type: {file.content_type}")
-    
-    if file and (file.filename.endswith(".png") or file.filename.endswith(".jpg") or file.filename.endswith(".jpeg") or file.filename.endswith(".pdf")):
-        input_file_path = os.path.join(UPLOAD_FOLDER, f"detect_{file.filename}")
-        file.save(input_file_path)
-        print(f"File saved to: {input_file_path}")
+    try:
+        if "file" not in request.files:
+            print("ERROR: No file part in request")
+            return jsonify({"error": "No file part"}), 400
+        
+        file = request.files["file"]
+        
+        if file.filename == "":
+            print("ERROR: No selected file")
+            return jsonify({"error": "No selected file"}), 400
+        
+        print(f"File received for text detection: {file.filename}, Type: {file.content_type}")
+        
+        if file and (file.filename.endswith(".png") or file.filename.endswith(".jpg") or file.filename.endswith(".jpeg") or file.filename.endswith(".pdf")):
+            input_file_path = os.path.join(UPLOAD_FOLDER, f"detect_{file.filename}")
+            
+            try:
+                file.save(input_file_path)
+                print(f"File saved to: {input_file_path}")
+            except Exception as e:
+                print(f"ERROR saving file: {str(e)}")
+                return jsonify({"error": f"Failed to save file: {str(e)}"}), 500
 
-        try:
-            # Handle PDF conversion if needed
-            if file.filename.endswith(".pdf"):
-                print("Converting PDF to image for text detection...")
-                image = convert_from_path(input_file_path, fmt="png")
-                converted_image_path = os.path.join(UPLOAD_FOLDER, f"converted_detect_{file.filename.replace('.pdf', '.png')}")
-                image[0].save(converted_image_path, "PNG")
-                print(f"Converted PDF to image: {converted_image_path}")
-                input_file_path = converted_image_path
-            
-            # Process the image for text detection
-            print("Running text detection and translation...")
-            detect_text_and_draw(input_file_path)
-            
-            # The function saves the result as "result.png"
-            result_path = "result.png"
-            
-            if os.path.exists(result_path):
-                print(f"Text detection completed. Result saved to: {result_path}")
+            try:
+                # Handle PDF conversion if needed
+                if file.filename.endswith(".pdf"):
+                    print("Converting PDF to image for text detection...")
+                    try:
+                        image = convert_from_path(input_file_path, fmt="png")
+                        converted_image_path = os.path.join(UPLOAD_FOLDER, f"converted_detect_{file.filename.replace('.pdf', '.png')}")
+                        image[0].save(converted_image_path, "PNG")
+                        print(f"Converted PDF to image: {converted_image_path}")
+                        input_file_path = converted_image_path
+                    except Exception as pdf_error:
+                        print(f"ERROR converting PDF: {str(pdf_error)}")
+                        return jsonify({"error": f"PDF conversion failed: {str(pdf_error)}"}), 500
                 
-                # Return the processed image
-                return send_file(
-                    result_path,
-                    as_attachment=True,
-                    download_name=f"detected_{file.filename.replace('.pdf', '.png')}",
-                    mimetype='image/png'
-                )
-            else:
-                print("ERROR: Result image not found")
-                return jsonify({"error": "Text detection failed - result image not generated"}), 500
+                # Test if Google Cloud credentials are working
+                print("Testing Google Cloud credentials...")
+                try:
+                    from google.cloud import vision
+                    client = vision.ImageAnnotatorClient()
+                    print("Google Cloud Vision client initialized successfully")
+                except Exception as cred_error:
+                    print(f"ERROR with Google Cloud credentials: {str(cred_error)}")
+                    return jsonify({"error": f"Google Cloud credentials error: {str(cred_error)}"}), 500
                 
-        except Exception as e:
-            print(f"ERROR during text detection: {str(e)}")
-            return jsonify({"error": f"Text detection failed: {str(e)}"}), 500
+                # Process the image for text detection
+                print("Running text detection and translation...")
+                detect_text_and_draw(input_file_path)
+                
+                # The function saves the result as "result.png"
+                result_path = "result.png"
+                
+                if os.path.exists(result_path):
+                    print(f"Text detection completed. Result saved to: {result_path}")
+                    
+                    # Return the processed image
+                    return send_file(
+                        result_path,
+                        as_attachment=True,
+                        download_name=f"detected_{file.filename.replace('.pdf', '.png')}",
+                        mimetype='image/png'
+                    )
+                else:
+                    print("ERROR: Result image not found")
+                    return jsonify({"error": "Text detection failed - result image not generated"}), 500
+                    
+            except Exception as processing_error:
+                print(f"ERROR during text processing: {str(processing_error)}")
+                import traceback
+                print(f"Full traceback: {traceback.format_exc()}")
+                return jsonify({"error": f"Text processing failed: {str(processing_error)}"}), 500
+                
+        else:
+            print(f"ERROR: Unsupported file type for text detection: {file.filename}")
+            return jsonify({"error": "File must be PNG, JPG, JPEG, or PDF"}), 400
             
-    else:
-        print(f"ERROR: Unsupported file type for text detection: {file.filename}")
-        return jsonify({"error": "File must be PNG, JPG, JPEG, or PDF"}), 400
-
+    except Exception as e:
+        print(f"UNEXPECTED ERROR in detect_text endpoint: {str(e)}")
+        import traceback
+        print(f"Full traceback: {traceback.format_exc()}")
+        return jsonify({"error": f"Unexpected error: {str(e)}"}), 500
 
 @app.route("/upload", methods=["POST"])
 def upload_file():
@@ -186,4 +213,4 @@ def upload_file():
         return jsonify({"error": "File is not a PNG or PDF image"}), 400
     
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, host="0.0.0.0", port=5000)
