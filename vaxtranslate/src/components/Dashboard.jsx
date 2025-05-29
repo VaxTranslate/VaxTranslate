@@ -1,12 +1,12 @@
 import React, { useRef, useState, useCallback } from "react";
 import { 
-  Upload as UploadIcon, 
+  Upload, 
   X, 
   FileText, 
   AlertCircle,
   CheckCircle2,
   Loader2,
-  ShieldCheck,
+  Shield,
   Zap,
   Brain,
   BadgeCheck,
@@ -15,12 +15,45 @@ import {
   FileUp,
   FileCheck,
   Trash2,
-  Sparkles
+  Sparkles,
+  Eye
 } from "lucide-react";
 
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import CountrySelector from "./CountrySelector"; // Import the new component
+
+const PROCESS_STEPS = [
+  { 
+    title: "Upload", 
+    icon: FileUp, 
+    description: "Upload your document securely to our platform",
+    color: "from-blue-500 to-blue-600",
+    statusKey: 'upload'
+  },
+  { 
+    title: "Scan", 
+    icon: Scan, 
+    description: "Advanced OCR scans every detail",
+    color: "from-blue-600 to-blue-700",
+    statusKey: 'scan'
+  },
+  { 
+    title: "Process", 
+    icon: Brain, 
+    description: "AI analyzes and translates content",
+    color: "from-blue-700 to-blue-800",
+    statusKey: 'process'
+  },
+  { 
+    title: "Visualize", 
+    icon: Eye, 
+    description: "View structured data and visual overlay",
+    color: "from-blue-800 to-blue-900",
+    statusKey: 'translate'
+  }
+];
+
 
 const FileUploadBox = ({ dragActive, onDragEvents, fileInputRef, handleFileChange }) => (
   <div
@@ -48,7 +81,7 @@ const FileUploadBox = ({ dragActive, onDragEvents, fileInputRef, handleFileChang
     />
     <div className="flex flex-col items-center">
       <div className="w-20 h-20 mb-4 rounded-full bg-blue-50 flex items-center justify-center group-hover:scale-110 transition-transform">
-        <UploadIcon className={`w-10 h-10 transition-colors duration-300 ${
+        <Upload className={`w-10 h-10 transition-colors duration-300 ${
           dragActive ? "text-blue-600" : "text-blue-500"
         }`} />
       </div>
@@ -167,10 +200,12 @@ const Dashboard = () => {
   const [processingStatus, setProcessingStatus] = useState({
     upload: 'pending',
     scan: 'pending',
-    process: 'pending'
+    process: 'pending',
+    translate: 'pending'
   });
 
   const getCurrentStep = () => {
+     if (processingStatus.translate === 'complete') return 3;
     if (processingStatus.process === 'complete') return 2;
     if (processingStatus.scan === 'complete') return 1;
     if (processingStatus.upload === 'complete') return 0;
@@ -222,7 +257,9 @@ const Dashboard = () => {
 
     const formData = new FormData();
     formData.append("file", selectedFiles[0]);
-    formData.append("country", selectedCountry); // Add country to form data
+    formData.append("country", selectedCountry);
+
+    const originalFile = selectedFiles[0];
 
     try {
       console.log("Uploading file...");
@@ -239,6 +276,7 @@ const Dashboard = () => {
 
       console.log("Starting processing step...");
       updateProcessingStatus('process', 'processing');
+      
       const response = await axios.post(
         "https://vaxtranslate.ddns.net/upload",
         formData,
@@ -248,30 +286,61 @@ const Dashboard = () => {
         }
       );
 
-      console.log("Processing complete. Navigating to result page...");
+      console.log("Processing complete. Starting translation overlay...");
       updateProcessingStatus('process', 'complete');
+      updateProcessingStatus('translate', 'processing');
+
+      const textDetectionFormData = new FormData();
+      textDetectionFormData.append("file", originalFile);
+
+      let translatedImageBlob = null;
+      try {
+
+        const textDetectionResponse = await axios.post(
+          "https://vaxtranslate.ddns.net/detect-text",
+          textDetectionFormData,
+          {
+            responseType: "blob",
+            headers: { "Content-Type": "multipart/form-data" },
+          }
+        );
+        translatedImageBlob = URL.createObjectURL(textDetectionResponse.data);
+        console.log("Text detection overlay complete.");
+      } catch (textDetectionError) {
+        console.warn("Text detection failed, continuing without overlay:", textDetectionError);
+      }
+
+      updateProcessingStatus('translate', 'complete');
+
       setTimeout(() => {
         setLoading(false);
         console.log("Navigating to /result with response data:", response.data);
-        navigate('/result', { state: { cis: response.data, country: selectedCountry } });
+        navigate('/result', { 
+          state: { 
+            cis: response.data, 
+            country: selectedCountry,
+            originalFile: originalFile,
+            translatedImage: translatedImageBlob
+          } 
+        });
       }, 500);
     } catch (error) {
       console.error("Upload failed:", error);
       updateProcessingStatus('process', 'error');
+      updateProcessingStatus('translate', 'error');
       setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 mt-10">
-      <div className="max-w-4xl mx-auto px-4">
-        <div className="bg-gradient-to-br from-gray-50 to-white shadow-2xl rounded-3xl p-8 border border-gray-100 mb-4">
+    <div className="max-w-4xl mx-auto px-4 mb-16">
+        <div className="bg-gradient-to-br from-gray-50 to-white shadow-2xl rounded-3xl p-8 border border-gray-100">
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold text-gray-800 mb-2">
-              Translate
+              Start Your Translation
             </h2>
             <p className="text-gray-600">
-              Upload your document, and we’ll handle the rest
+              Upload your document and let our AI handle the rest
             </p>
           </div>
 
@@ -308,7 +377,6 @@ const Dashboard = () => {
                 ))}
               </div>
               
-              {/* Add the Country Selector component here */}
               <div className="mt-6 p-4 bg-gray-50 rounded-xl">
                 <CountrySelector 
                   selectedCountry={selectedCountry} 
@@ -331,26 +399,17 @@ const Dashboard = () => {
                 Processing Your Document
               </h3>
               <div className="max-w-lg mx-auto">
-                <StepIndicator currentStep={getCurrentStep()} totalSteps={3} />
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <ProcessingStep
-                    title="Uploading Files"
-                    description="Preparing and uploading your documents"
-                    status={processingStatus.upload}
-                    icon={FileUp}
-                  />
-                  <ProcessingStep
-                    title="Scanning Content"
-                    description="Analyzing document structure"
-                    status={processingStatus.scan}
-                    icon={Scan}
-                  />
-                  <ProcessingStep
-                    title="Processing"
-                    description="Extracting and formatting data"
-                    status={processingStatus.process}
-                    icon={FileCheck}
-                  />
+                <StepIndicator currentStep={getCurrentStep()} totalSteps={4} />
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {PROCESS_STEPS.map((step) => (
+                    <ProcessingStep
+                      key={step.title}
+                      title={step.title}
+                      description={step.description}
+                      status={processingStatus[step.statusKey]}
+                      icon={step.icon}
+                    />
+                  ))}
                 </div>
               </div>
             </div>
@@ -369,7 +428,7 @@ const Dashboard = () => {
                 </span>
               ) : (
                 <span className="flex items-center justify-center">
-                  <UploadIcon className="w-5 h-5 mr-2" />
+                  <Upload className="w-5 h-5 mr-2" />
                   Translate Document
                 </span>
               )}
@@ -382,7 +441,7 @@ const Dashboard = () => {
             )}
           </div>
 
-          {processingStatus.process === 'error' && (
+          {(processingStatus.process === 'error' || processingStatus.translate === 'error') && (
             <div className="mt-4 p-4 bg-red-50 rounded-xl border border-red-200 shadow-sm">
               <div className="flex items-center">
                 <AlertCircle className="w-5 h-5 text-red-500 mr-2" />
@@ -394,7 +453,7 @@ const Dashboard = () => {
           )}
         </div>
       </div>
-    </div>
+    
   );
 };
 
