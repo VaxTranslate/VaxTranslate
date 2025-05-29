@@ -333,14 +333,14 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 mb-16">
+    <div className="max-w-4xl mx-auto px-4 mb-16 mt-16">
         <div className="bg-gradient-to-br from-gray-50 to-white shadow-2xl rounded-3xl p-8 border border-gray-100">
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold text-gray-800 mb-2">
-              Start Your Translation
+              Translate
             </h2>
             <p className="text-gray-600">
-              Upload your document and let our AI handle the rest
+              Upload your document, and we’ll handle the rest
             </p>
           </div>
 
