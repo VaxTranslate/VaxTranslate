@@ -30,7 +30,7 @@ function Login(){
               window.dispatchEvent(new Event("loginStateChanged"));
 
               // redirect to dashboard
-              navigate("/");
+              navigate("/dashboard");
                 
             }            
         }catch (err){
@@ -52,7 +52,7 @@ function Login(){
       localStorage.setItem("loggedIn", "true");
       window.dispatchEvent(new Event("loginStateChanged"));
 
-      navigate("/");
+      navigate("/dashboard");
       
     } catch (error) {
       setError(error.message);

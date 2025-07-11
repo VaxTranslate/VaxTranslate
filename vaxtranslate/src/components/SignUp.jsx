@@ -3,6 +3,9 @@ import { Mail, Lock, User as UserIcon } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { auth } from "../firebase";
 import { registerUsers } from "../firebaseAuth";
+import { FcGoogle } from "react-icons/fc";
+import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+
 
 
 function Register() {
@@ -33,6 +36,23 @@ function Register() {
             setError(err.message);
         }
         
+    };
+
+  const handleGoogleLogin = async () => {
+      const provider = new GoogleAuthProvider();
+      try {
+        await signInWithPopup(auth, provider);
+        alert("Logged in with Google!");
+  
+        // Set login state in localStorage and notify other components
+        localStorage.setItem("loggedIn", "true");
+        window.dispatchEvent(new Event("loginStateChanged"));
+  
+        navigate("/dashboard");
+        
+      } catch (error) {
+        setError(error.message);
+      }
     };
 
   return (
@@ -94,6 +114,18 @@ function Register() {
             >
               Create account
             </button>
+             
+             {/* add button login  with google button */}
+            <button
+              type="button"
+              className="group relative w-full flex justify-center gap-2 px-4 py-2 border border-gray-300 rounded-md bg-white text-sm font-medium shadow hover:shadow-md transition"
+              onClick={handleGoogleLogin}
+            >
+              <FcGoogle className="w-5 h-5" />
+                Sign up with Google
+            </button> 
+                          
+
             <div className="text-sm text-center mt-2">
               <Link
                 to="/login"
